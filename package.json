@@ -1,0 +1,21 @@
+{
+  "name": "linklang-vite",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w backend\" \"npm run dev -w frontend\"",
+    "db:seed": "npm run db:seed -w backend",
+    "db:push": "npm run db:push -w backend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "allowScripts": {
+    "better-sqlite3@12.11.1": true,
+    "workerd@1.20260811.1": true
+  }
+}

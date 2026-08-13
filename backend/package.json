@@ -1,0 +1,31 @@
+{
+  "name": "linklang-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "wrangler d1 migrations apply linklang-db --local",
+    "db:migrate:remote": "wrangler d1 migrations apply linklang-db --remote",
+    "db:seed:local": "node scripts/generate-seed.mjs && wrangler d1 execute linklang-db --local --file=./drizzle/seed.sql",
+    "db:seed:remote": "node scripts/generate-seed.mjs && wrangler d1 execute linklang-db --remote --file=./drizzle/seed.sql"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "date-fns": "^3.6.0",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.13.2",
+    "jose": "^6.2.8",
+    "resend": "^6.19.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260813.1",
+    "@types/bcryptjs": "^2.4.6",
+    "drizzle-kit": "^0.31.10",
+    "typescript": "^5.5.3",
+    "wrangler": "^4.122.0"
+  }
+}
