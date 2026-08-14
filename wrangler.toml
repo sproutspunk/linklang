@@ -1,0 +1,12 @@
+name = "linklang-api"
+main = "backend/src/index.ts"
+compatibility_date = "2024-11-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "linklang-db"
+database_id = "42c7f834-5151-4e19-8c52-e6d9835aedd6"
+migrations_dir = "backend/migrations"
+
+[vars]
+CORS_ORIGIN = "https://linklang.co.uk"

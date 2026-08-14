@@ -12,10 +12,14 @@
     "db:push": "npm run db:push -w backend"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "wrangler": "^4.122.0"
   },
   "allowScripts": {
     "better-sqlite3@12.11.1": true,
     "workerd@1.20260811.1": true
+  },
+  "dependencies": {
+    "resend": "^6.19.0"
   }
 }

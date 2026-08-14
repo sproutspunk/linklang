@@ -9,7 +9,9 @@ export default function Navbar() {
   return (
     <nav className="border-b border-slate-200 bg-white">
       <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
-        <Link to="/" className="text-xl font-bold text-brand-700">LinkLang</Link>
+        <Link to="/" className="h-10 w-10">
+          <img src="/linklang_logo.svg" alt="LinkLang" className="h-10 w-10" />
+        </Link>
         <div className="flex items-center gap-4">
           {user ? (
             <>
