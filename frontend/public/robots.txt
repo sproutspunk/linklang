@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /portal
+Disallow: /admin
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+
+Sitemap: https://linklang.co.uk/sitemap.xml
