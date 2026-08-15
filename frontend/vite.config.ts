@@ -14,7 +14,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       "/api": {
-        target: "https://linklang-api.sproutspunk.workers.dev",
+        target: "https://linklang-api-production.sproutspunk.workers.dev",
         changeOrigin: true,
         secure: true,
       },

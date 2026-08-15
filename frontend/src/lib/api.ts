@@ -1,6 +1,9 @@
 import { useAuth } from "./store";
 
-const API_URL = import.meta.env.VITE_API_URL || "";
+const API_URL = import.meta.env.VITE_API_URL || 
+  (typeof window !== 'undefined' && window.location.hostname === 'linklang.co.uk' 
+    ? 'https://linklang-api-production.sproutspunk.workers.dev'
+    : 'http://localhost:8787');
 
 export async function apiFetch(path: string, options: RequestInit = {}) {
   const token = useAuth.getState().token;

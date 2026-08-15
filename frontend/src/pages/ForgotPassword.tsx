@@ -7,8 +7,8 @@ export default function ForgotPassword() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
+  const step = token ? "reset" : "email";
   
-  const [step, setStep] = useState<"email" | "reset">(token ? "reset" : "email");
   const [email, setEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
