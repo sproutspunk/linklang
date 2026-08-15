@@ -155,6 +155,19 @@ export default function Home() {
   const { user } = useAuth();
   const [lang, setLang] = useState<Language>("PL");
   const t = content[lang];
+  const [contactForm, setContactForm] = useState({ name: "", email: "", message: "" });
+  const [contactSubmitted, setContactSubmitted] = useState(false);
+
+  async function handleContactSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    // Tutaj można wysłać email przez backend API
+    console.log("Wiadomość:", contactForm);
+    setContactSubmitted(true);
+    setTimeout(() => {
+      setContactSubmitted(false);
+      setContactForm({ name: "", email: "", message: "" });
+    }, 3000);
+  }
 
   return (
     <main className="bg-white">
@@ -255,11 +268,62 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Contact Section */}
+      {/* Contact Form Section */}
+      <section className="border-t border-slate-200 bg-brand-50">
+        <div className="mx-auto max-w-2xl px-4 py-16">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl font-medium text-slate-900">{lang === "PL" ? "Wyślij wiadomość" : "Send a message"}</h2>
+            <p className="mt-2 text-sm text-slate-600">{lang === "PL" ? "Skontaktuj się bezpośrednio" : "Get in touch directly"}</p>
+          </div>
+          <form onSubmit={handleContactSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-900">{lang === "PL" ? "Imię i nazwisko" : "Name"}</label>
+              <input 
+                type="text" 
+                required 
+                value={contactForm.name}
+                onChange={(e) => setContactForm({...contactForm, name: e.target.value})}
+                className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-brand-600 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-900">Email</label>
+              <input 
+                type="email" 
+                required 
+                value={contactForm.email}
+                onChange={(e) => setContactForm({...contactForm, email: e.target.value})}
+                className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-brand-600 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-900">{lang === "PL" ? "Wiadomość" : "Message"}</label>
+              <textarea 
+                required 
+                rows={5}
+                value={contactForm.message}
+                onChange={(e) => setContactForm({...contactForm, message: e.target.value})}
+                className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-brand-600 focus:outline-none"
+              />
+            </div>
+            <button 
+              type="submit"
+              className="w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700 transition"
+            >
+              {lang === "PL" ? "Wyślij" : "Send"}
+            </button>
+            {contactSubmitted && (
+              <p className="text-sm text-green-600">{lang === "PL" ? "✓ Wiadomość wysłana!" : "✓ Message sent!"}</p>
+            )}
+          </form>
+        </div>
+      </section>
+
+      {/* Contact Info Section */}
       <section className="mx-auto max-w-6xl px-4 py-16">
         <div className="text-center">
           <img src="/linklang_logo.svg" alt="LinkLang" className="h-16 w-16 mx-auto mb-6" />
-          <h2 className="text-2xl font-medium text-slate-900 mb-8">Skontaktuj się z LinkLang</h2>
+          <h2 className="text-2xl font-medium text-slate-900 mb-8">{lang === "PL" ? "Skontaktuj się z LinkLang" : "Contact LinkLang"}</h2>
           <div className="flex flex-col md:flex-row justify-center gap-12">
             <div>
               <p className="text-sm text-slate-500 mb-2">Email</p>
@@ -268,7 +332,7 @@ export default function Home() {
               </a>
             </div>
             <div>
-              <p className="text-sm text-slate-500 mb-2">Telefon</p>
+              <p className="text-sm text-slate-500 mb-2">{lang === "PL" ? "Telefon" : "Phone"}</p>
               <a href="tel:07770110735" className="text-lg font-medium text-brand-600 hover:text-brand-700">
                 07770 110735
               </a>
