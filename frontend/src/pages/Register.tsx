@@ -1,10 +1,17 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiFetch } from "../lib/api";
 import { Loader2 } from "lucide-react";
 
+declare global {
+  interface Window {
+    hcaptcha: any;
+  }
+}
+
 export default function Register() {
   const navigate = useNavigate();
+  const captchaRef = useRef<any>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -15,15 +22,31 @@ export default function Register() {
     e.preventDefault();
     setLoading(true);
     setError("");
+    
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(password)) {
+      setError("Hasło musi mieć: min. 8 znaków, dużą literę, małą literę, cyfrę i znak specjalny (!@#$%^&*)");
+      setLoading(false);
+      return;
+    }
+    
+    const captchaToken = captchaRef.current?.getResponse?.();
+    if (!captchaToken) {
+      setError("Proszę potwierdzić, że jesteś człowiekiem");
+      setLoading(false);
+      return;
+    }
+
     try {
       await apiFetch("/api/register", {
         method: "POST",
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, password, captchaToken }),
       });
       navigate("/login");
     } catch (err: any) {
       setError(err.message || "Rejestracja nie powiodła się");
       setLoading(false);
+      captchaRef.current?.reset?.();
     }
   }
 
@@ -45,9 +68,12 @@ export default function Register() {
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700">Hasło</label>
-            <input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)}
+            <input type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)}
+              placeholder="Min. 8 znaków, duża, mała, cyfra, @!#$%"
               className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            <p className="mt-1 text-xs text-slate-500">Min. 8 znaków, duża litera, mała litera, cyfra, znak specjalny</p>
           </div>
+          <div className="h-captcha" data-sitekey="f5561ba5-8d1e-40ca-8cc0-ccc7ee434e78" ref={captchaRef} />
           {error && <p className="text-sm text-red-600">{error}</p>}
           <button type="submit" disabled={loading}
             className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50">

@@ -75,13 +75,15 @@ async function authRateLimit(c: any, next: any) {
 // Auth routes
 app.post("/api/register", authRateLimit, async (c) => {
   const db = createDb(c.env.DB);
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
   const schema = z.object({
     name: z.string().min(1),
     email: z.string().email(),
-    password: z.string().min(6),
+    password: z.string().regex(passwordRegex, "Password must be at least 8 characters with uppercase, lowercase, digit, and special character"),
+    captchaToken: z.string().optional(),
   });
   const parsed = schema.safeParse(await c.req.json());
-  if (!parsed.success) return c.json({ error: "Invalid input" }, 400);
+  if (!parsed.success) return c.json({ error: parsed.error.flatten().fieldErrors.password?.[0] || "Invalid input" }, 400);
 
   const existing = await db.select().from(users).where(eq(users.email, parsed.data.email)).get();
   if (existing) return c.json({ error: "Email already exists" }, 409);

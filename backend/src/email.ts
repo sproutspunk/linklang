@@ -60,3 +60,12 @@ export function sendStatusChangeEmail(apiKey: string, to: string, name: string, 
     `<p>Cześć ${name},</p><p>Status Twojego zlecenia #${String(orderId).padStart(4, "0")} zmienił się na: <strong>${label}</strong>.</p>`
   );
 }
+
+export function sendPasswordResetEmail(apiKey: string, to: string, name: string, resetLink: string) {
+  return send(
+    apiKey,
+    "LinkLang - Reset hasła",
+    to,
+    `<p>Cześć ${name},</p><p>Otrzymaliśmy prośbę o reset hasła do Twojego konta LinkLang.</p><p><a href="${resetLink}" style="background-color: #0f3d2e; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; display: inline-block;">Zmień hasło</a></p><p>Link wygasa za 24 godziny.</p><p>Jeśli nie prosiłeś o reset hasła, zignoruj tę wiadomość.</p>`
+  );
+}

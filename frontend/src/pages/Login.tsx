@@ -51,7 +51,10 @@ export default function Login() {
             {loading && <Loader2 className="h-4 w-4 animate-spin" />} Zaloguj się
           </button>
         </form>
-        <p className="mt-6 text-center text-xs text-slate-400">
+        <p className="mt-4 text-center text-xs text-slate-400">
+          <Link to="/forgot-password" className="text-brand-600 hover:underline">Zapomniałeś hasła?</Link>
+        </p>
+        <p className="mt-2 text-center text-xs text-slate-400">
           Nie masz konta? <Link to="/register" className="text-brand-600 hover:underline">Zarejestruj</Link>
         </p>
       </div>
