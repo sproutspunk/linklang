@@ -126,7 +126,11 @@ export default function CookieBanner() {
                   {t.accept}
                 </button>
               </div>
-              <button onClick={handleReject} className="shrink-0 md:hidden">
+              <button 
+                onClick={handleReject} 
+                className="shrink-0 md:hidden" 
+                aria-label={lang === "PL" ? "Zamknij" : "Close"}
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -134,7 +138,10 @@ export default function CookieBanner() {
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <h3 className="font-medium">{t.preferences}</h3>
-                <button onClick={() => setShowPreferences(false)}>
+                <button 
+                  onClick={() => setShowPreferences(false)}
+                  aria-label={lang === "PL" ? "Zamknij" : "Close"}
+                >
                   <X className="h-5 w-5" />
                 </button>
               </div>

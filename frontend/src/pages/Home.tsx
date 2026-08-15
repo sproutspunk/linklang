@@ -358,15 +358,15 @@ export default function Home() {
               <span className="text-sm font-medium text-slate-900">{t.footer}</span>
             </div>
             <div className="flex gap-6 text-sm">
-              <Link to="/privacy" className="text-slate-600 hover:text-brand-600">
+              <Link to="/privacy" className="text-slate-700 hover:text-brand-600 font-medium">
                 {lang === "PL" ? "Polityka prywatności" : "Privacy"}
               </Link>
-              <Link to="/terms" className="text-slate-600 hover:text-brand-600">
+              <Link to="/terms" className="text-slate-700 hover:text-brand-600 font-medium">
                 {lang === "PL" ? "Warunki" : "Terms"}
               </Link>
             </div>
           </div>
-          <div className="border-t border-slate-200 pt-8 text-xs text-slate-500 text-center">
+          <div className="border-t border-slate-200 pt-8 text-xs text-slate-700 text-center">
             <p>{lang === "PL" ? "Designed & built with precision for professional translation services." : "Designed & built with precision for professional translation services."}</p>
           </div>
         </div>

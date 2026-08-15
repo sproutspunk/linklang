@@ -102,12 +102,12 @@ export default function Privacy() {
   return (
     <main className="bg-white">
       <div className="mx-auto max-w-3xl px-4 py-16">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <h1 className="text-4xl font-bold text-slate-900">{t.title}</h1>
-          <div className="flex gap-2">
+          <div className="flex gap-2 shrink-0">
             <button
               onClick={() => setLang("PL")}
-              className={`px-3 py-1 rounded text-sm font-medium ${
+              className={`px-3 py-1 rounded text-sm font-medium transition ${
                 lang === "PL" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-700"
               }`}
             >
@@ -115,7 +115,7 @@ export default function Privacy() {
             </button>
             <button
               onClick={() => setLang("EN")}
-              className={`px-3 py-1 rounded text-sm font-medium ${
+              className={`px-3 py-1 rounded text-sm font-medium transition ${
                 lang === "EN" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-700"
               }`}
             >
