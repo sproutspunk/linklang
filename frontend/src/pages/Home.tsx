@@ -63,7 +63,7 @@ const content = {
         {
           icon: "map",
           title: "Zasięg",
-          desc: "Baza w Aberdeen. Dojazd osobisty do 25 mil. Online w całym UK. Znam różnicę między polskim systemem a brytyjskim - wiem, że GP to nie jest POZ, a council tax to nie jest czynsz.",
+          desc: "Baza w Banff. Dojazd osobisty do 25 mil. Online w całym UK. Znam różnicę między polskim systemem a brytyjskim - wiem, że GP to nie jest POZ, a council tax to nie jest czynsz.",
         },
       ],
     },
@@ -129,7 +129,7 @@ const content = {
         {
           icon: "map",
           title: "Coverage",
-          desc: "Based in Aberdeen. In-person within 25 miles. Online UK-wide. I know the difference between the Polish system and the British one - I know that a GP is not a POZ, and that council tax is not rent.",
+          desc: "Based in Banff. In-person within 25 miles. Online UK-wide. I know the difference between the Polish system and the British one - I know that a GP is not a POZ, and that council tax is not rent.",
         },
       ],
     },
@@ -155,6 +155,11 @@ export default function Home() {
   const { user } = useAuth();
   const [lang, setLang] = useState<Language>("PL");
   const t = content[lang];
+
+  const handleLangChange = (newLang: Language) => {
+    setLang(newLang);
+    localStorage.setItem("linklang_lang", newLang);
+  };
   const [contactForm, setContactForm] = useState({ name: "", email: "", message: "" });
   const [contactSubmitted, setContactSubmitted] = useState(false);
 
@@ -174,7 +179,7 @@ export default function Home() {
       {/* Language Switcher */}
       <div className="flex justify-end gap-2 px-4 py-3 bg-white border-b border-slate-200">
         <button
-          onClick={() => setLang("PL")}
+          onClick={() => handleLangChange("PL")}
           className={`px-3 py-1 rounded text-sm font-medium transition ${
             lang === "PL"
               ? "bg-brand-600 text-white"
@@ -184,7 +189,7 @@ export default function Home() {
           PL
         </button>
         <button
-          onClick={() => setLang("EN")}
+          onClick={() => handleLangChange("EN")}
           className={`px-3 py-1 rounded text-sm font-medium transition ${
             lang === "EN"
               ? "bg-brand-600 text-white"
@@ -277,8 +282,9 @@ export default function Home() {
           </div>
           <form onSubmit={handleContactSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-900">{lang === "PL" ? "Imię i nazwisko" : "Name"}</label>
+              <label htmlFor="contact-name" className="block text-sm font-medium text-slate-900">{lang === "PL" ? "Imię i nazwisko" : "Name"}</label>
               <input 
+                id="contact-name"
                 type="text" 
                 required 
                 value={contactForm.name}
@@ -287,8 +293,9 @@ export default function Home() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-900">Email</label>
+              <label htmlFor="contact-email" className="block text-sm font-medium text-slate-900">Email</label>
               <input 
+                id="contact-email"
                 type="email" 
                 required 
                 value={contactForm.email}
@@ -297,8 +304,9 @@ export default function Home() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-900">{lang === "PL" ? "Wiadomość" : "Message"}</label>
+              <label htmlFor="contact-message" className="block text-sm font-medium text-slate-900">{lang === "PL" ? "Wiadomość" : "Message"}</label>
               <textarea 
+                id="contact-message"
                 required 
                 rows={5}
                 value={contactForm.message}
@@ -343,9 +351,24 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="border-t border-slate-200 bg-brand-50">
-        <div className="mx-auto max-w-6xl px-4 py-8 text-sm text-slate-600 flex items-center justify-center gap-2">
-          <img src="/linklang_logo.svg" alt="LinkLang" className="h-4 w-4" />
-          {t.footer}
+        <div className="mx-auto max-w-6xl px-4 py-12">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-8">
+            <div className="flex items-center gap-2">
+              <img src="/linklang_logo.svg" alt="LinkLang" className="h-6 w-6" />
+              <span className="text-sm font-medium text-slate-900">{t.footer}</span>
+            </div>
+            <div className="flex gap-6 text-sm">
+              <Link to="/privacy" className="text-slate-600 hover:text-brand-600">
+                {lang === "PL" ? "Polityka prywatności" : "Privacy"}
+              </Link>
+              <Link to="/terms" className="text-slate-600 hover:text-brand-600">
+                {lang === "PL" ? "Warunki" : "Terms"}
+              </Link>
+            </div>
+          </div>
+          <div className="border-t border-slate-200 pt-8 text-xs text-slate-500 text-center">
+            <p>{lang === "PL" ? "Designed & built with precision for professional translation services." : "Designed & built with precision for professional translation services."}</p>
+          </div>
         </div>
       </footer>
     </main>
