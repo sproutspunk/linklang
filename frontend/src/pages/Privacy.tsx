@@ -95,7 +95,12 @@ export default function Privacy() {
   useEffect(() => {
     const savedLang = localStorage.getItem("linklang_lang") as "PL" | "EN" | null;
     if (savedLang) setLang(savedLang);
+    window.scrollTo(0, 0);
   }, []);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [lang]);
 
   const t = content[lang];
 
