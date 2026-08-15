@@ -256,8 +256,8 @@ vars = { CORS_ORIGIN = "https://yourdomain.com" }
 - **Lighthouse Scores**: 
   - Performance: 100/100
   - Accessibility: 100/100
-  - Best Practices: 83/100
-  - SEO: 83/100
+  - Best Practices: 100/100
+  - SEO: 100/100
 
 ---
 
