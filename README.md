@@ -137,7 +137,7 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 # Then create .dev.vars:
 JWT_SECRET=<your-generated-secret>
 RESEND_API_KEY=<resend-api-key-for-emails>
-CORS_ORIGIN=http://localhost:5173,https://yourdomain.com
+CORS_ORIGIN=http://localhost:5173,https://linklang.co.uk
 ```
 
 **Frontend** - Create `frontend/.env.development`:
@@ -244,7 +244,7 @@ npx wrangler secret put RESEND_API_KEY --env production
 Update `wrangler.toml`:
 ```toml
 [env.production]
-vars = { CORS_ORIGIN = "https://yourdomain.com" }
+vars = { CORS_ORIGIN = "https://linklang.co.uk" }
 ```
 
 ---
