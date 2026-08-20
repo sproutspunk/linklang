@@ -8,13 +8,14 @@ import { z } from "zod";
 import { createDb } from "./db.js";
 import { users, orders, quotes, messages, statusLogs } from "./schema.js";
 import { checkRateLimit } from "./rate-limit.js";
-import { sendWelcomeEmail, sendOrderConfirmationEmail, sendQuoteSentEmail, sendStatusChangeEmail } from "./email.js";
+import { sendWelcomeEmail, sendOrderConfirmationEmail, sendQuoteSentEmail, sendStatusChangeEmail, sendContactEmail, sendContactConfirmationEmail } from "./email.js";
 
 type Bindings = {
   DB: D1Database;
   JWT_SECRET: string;
   RESEND_API_KEY: string;
   CORS_ORIGIN: string;
+  CONTACT_INBOX_EMAIL?: string;
 };
 
 type UserPayload = { userId: number; role: "CLIENT" | "ADMIN"; email: string };
@@ -34,10 +35,63 @@ const ORDER_STATUSES = [
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
+const defaultAllowedOrigins = [
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "https://linklang.co.uk",
+  "https://www.linklang.co.uk",
+];
+
 app.use("*", secureHeaders());
 app.use("*", async (c, next) => {
-  const allowedOrigins = (c.env.CORS_ORIGIN || "http://localhost:5173").split(",").map((o) => o.trim());
-  return cors({ origin: allowedOrigins, credentials: true })(c, next);
+  const configured = (c.env.CORS_ORIGIN || "")
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean);
+
+  const allowedOrigins = Array.from(new Set([...configured, ...defaultAllowedOrigins]));
+
+  return cors({
+    origin: (origin) => {
+      if (!origin) return "http://localhost:5173";
+      const normalized = origin.toLowerCase();
+
+      if (allowedOrigins.includes(normalized)) return normalized;
+
+      const wildcardMatch = allowedOrigins.some((allowed) =>
+        allowed.includes("*") && normalized.endsWith(allowed.replace("*", ""))
+      );
+
+      if (wildcardMatch) return normalized;
+
+      if (normalized.endsWith(".linklang.pages.dev")) return normalized;
+
+      return allowedOrigins[0];
+    },
+    credentials: true,
+    allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowHeaders: ["Content-Type", "Authorization"],
+  })(c, next);
+});
+
+app.post("/api/contact", async (c) => {
+  const schema = z.object({
+    name: z.string().trim().min(1).max(120),
+    email: z.string().trim().email(),
+    message: z.string().trim().min(1).max(5000),
+  });
+  const parsed = schema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ error: "Invalid input" }, 400);
+
+  const contactInbox = c.env.CONTACT_INBOX_EMAIL || "hello@linklang.co.uk";
+
+  c.executionCtx.waitUntil(
+    Promise.all([
+      sendContactEmail(c.env.RESEND_API_KEY, contactInbox, parsed.data.name, parsed.data.email, parsed.data.message),
+      sendContactConfirmationEmail(c.env.RESEND_API_KEY, parsed.data.email, parsed.data.name),
+    ])
+  );
+  return c.json({ success: true }, 202);
 });
 
 function getJwtKey(env: Bindings) {

@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { apiFetch } from "../lib/api";
 import { useAuth } from "../lib/store";
 import {
   FileText, Users, Phone, Building2, Landmark,
   ArrowRight, ShieldCheck, Clock, MapPin,
+  Search, Bot, Leaf,
 } from "lucide-react";
 
 type Language = "PL" | "EN";
@@ -153,53 +155,56 @@ const iconMap: Record<string, any> = {
 
 export default function Home() {
   const { user } = useAuth();
-  const [lang, setLang] = useState<Language>("PL");
+  const [lang, setLang] = useState<Language>(() => {
+    const saved = localStorage.getItem("linklang_lang") as Language | null;
+    return saved || "PL";
+  });
   const t = content[lang];
 
-  const handleLangChange = (newLang: Language) => {
-    setLang(newLang);
-    localStorage.setItem("linklang_lang", newLang);
-  };
+  // Słuchaj zmian języka z Navbar
+  useEffect(() => {
+    const handleLanguageChange = () => {
+      const newLang = localStorage.getItem("linklang_lang") as Language | null;
+      if (newLang) setLang(newLang);
+    };
+    window.addEventListener("languageChange", handleLanguageChange);
+    return () => window.removeEventListener("languageChange", handleLanguageChange);
+  }, []);
+
   const [contactForm, setContactForm] = useState({ name: "", email: "", message: "" });
   const [contactSubmitted, setContactSubmitted] = useState(false);
+  const [contactSubmitting, setContactSubmitting] = useState(false);
+  const [contactError, setContactError] = useState<string | null>(null);
 
   async function handleContactSubmit(e: React.FormEvent) {
     e.preventDefault();
-    // Tutaj można wysłać email przez backend API
-    console.log("Wiadomość:", contactForm);
-    setContactSubmitted(true);
-    setTimeout(() => {
-      setContactSubmitted(false);
+    setContactError(null);
+    setContactSubmitting(true);
+
+    try {
+      await apiFetch("/api/contact", {
+        method: "POST",
+        body: JSON.stringify(contactForm),
+      });
+      setContactSubmitted(true);
       setContactForm({ name: "", email: "", message: "" });
-    }, 3000);
+      setTimeout(() => {
+        setContactSubmitted(false);
+      }, 3000);
+    } catch (err) {
+      console.error("Błąd wysyłania wiadomości:", err);
+      setContactError(
+        lang === "PL"
+          ? "Nie udało się wysłać wiadomości. Spróbuj ponownie później."
+          : "The message could not be sent. Please try again later."
+      );
+    } finally {
+      setContactSubmitting(false);
+    }
   }
 
   return (
     <main className="bg-white">
-      {/* Language Switcher */}
-      <div className="flex justify-end gap-2 px-4 py-3 bg-white border-b border-slate-200">
-        <button
-          onClick={() => handleLangChange("PL")}
-          className={`px-3 py-1 rounded text-sm font-medium transition ${
-            lang === "PL"
-              ? "bg-brand-600 text-white"
-              : "bg-white text-slate-700 border border-slate-200 hover:border-brand-600"
-          }`}
-        >
-          PL
-        </button>
-        <button
-          onClick={() => handleLangChange("EN")}
-          className={`px-3 py-1 rounded text-sm font-medium transition ${
-            lang === "EN"
-              ? "bg-brand-600 text-white"
-              : "bg-white text-slate-700 border border-slate-200 hover:border-brand-600"
-          }`}
-        >
-          EN
-        </button>
-      </div>
-
       {/* Hero Section */}
       <section className="bg-brand-600 text-white">
         <div className="mx-auto max-w-6xl px-4 py-20 md:py-28">
@@ -220,6 +225,17 @@ export default function Home() {
               </Link>
             )}
             <span className="self-center text-sm text-white opacity-80">{t.hero.pricing}</span>
+          </div>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-medium text-white">
+              <Search className="h-3.5 w-3.5" /> SEO 100/100
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-medium text-white">
+              <Bot className="h-3.5 w-3.5" /> Agentic Browsing Ready
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-medium text-white">
+              <Leaf className="h-3.5 w-3.5" /> 0.09 g CO₂ / visit
+            </span>
           </div>
         </div>
       </section>
@@ -274,7 +290,7 @@ export default function Home() {
       </section>
 
       {/* Contact Form Section */}
-      <section className="border-t border-slate-200 bg-brand-50">
+      <section id="contact-section" className="border-t border-slate-200 bg-brand-50">
         <div className="mx-auto max-w-2xl px-4 py-16">
           <div className="text-center mb-12">
             <h2 className="text-2xl font-medium text-slate-900">{lang === "PL" ? "Wyślij wiadomość" : "Send a message"}</h2>
@@ -316,12 +332,31 @@ export default function Home() {
             </div>
             <button 
               type="submit"
-              className="w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700 transition"
+              disabled={contactSubmitting}
+              className="w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-brand-400"
             >
-              {lang === "PL" ? "Wyślij" : "Send"}
+              {contactSubmitting
+                ? lang === "PL"
+                  ? "Wysyłanie..."
+                  : "Sending..."
+                : lang === "PL"
+                  ? "Wyślij"
+                  : "Send"}
             </button>
+            {contactError && (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {contactError}
+              </div>
+            )}
             {contactSubmitted && (
-              <p className="text-sm text-green-600">{lang === "PL" ? "✓ Wiadomość wysłana!" : "✓ Message sent!"}</p>
+              <div className="text-sm text-green-600">
+                <p>✓ {lang === "PL" ? "Wiadomość wysłana!" : "Message sent!"}</p>
+                <p className="mt-1">
+                  {lang === "PL"
+                    ? "Dziękuję za wiadomość. Skontaktuję się z Tobą tak szybko, jak to możliwe."
+                    : "Thank you for your message. I’ll get back to you as soon as possible."}
+                </p>
+              </div>
             )}
           </form>
         </div>
@@ -330,7 +365,9 @@ export default function Home() {
       {/* Contact Info Section */}
       <section className="mx-auto max-w-6xl px-4 py-16">
         <div className="text-center">
-          <img src="/linklang_logo.svg" alt="LinkLang" className="h-16 w-16 mx-auto mb-6" />
+          <Link to="/" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="inline-block mb-6">
+            <img src="/linklang_logo.svg" alt="LinkLang" className="h-16 w-16 mx-auto" />
+          </Link>
           <h2 className="text-2xl font-medium text-slate-900 mb-8">{lang === "PL" ? "Skontaktuj się z LinkLang" : "Contact LinkLang"}</h2>
           <div className="flex flex-col md:flex-row justify-center gap-12">
             <div>
@@ -353,10 +390,10 @@ export default function Home() {
       <footer className="border-t border-slate-200 bg-brand-50">
         <div className="mx-auto max-w-6xl px-4 py-12">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-8">
-            <div className="flex items-center gap-2">
+            <Link to="/" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="flex items-center gap-2 hover:opacity-70 transition">
               <img src="/linklang_logo.svg" alt="LinkLang" className="h-6 w-6" />
               <span className="text-sm font-medium text-slate-900">{t.footer}</span>
-            </div>
+            </Link>
             <div className="flex gap-6 text-sm">
               <Link to="/privacy" className="text-slate-700 hover:text-brand-600 font-medium">
                 {lang === "PL" ? "Polityka prywatności" : "Privacy"}

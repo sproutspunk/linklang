@@ -122,7 +122,7 @@ linklang-vite/
 
 1. **Clone & Install**
 ```bash
-git clone https://github.com/yourusername/linklang.git
+git clone https://github.com/sproutspunk/linklang.git
 cd linklang-vite
 npm install
 ```

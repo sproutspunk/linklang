@@ -1,13 +1,23 @@
 import { useAuth } from "./store";
 
-const API_URL = import.meta.env.VITE_API_URL || 
-  (typeof window !== 'undefined' && window.location.hostname === 'linklang.co.uk' 
-    ? 'https://linklang-api-production.sproutspunk.workers.dev'
-    : 'http://localhost:8787');
+const DEFAULT_LOCAL_API = "http://localhost:8787";
+const DEFAULT_PROD_API = "https://linklang-api-production.sproutspunk.workers.dev";
 
 export async function apiFetch(path: string, options: RequestInit = {}) {
   const token = useAuth.getState().token;
-  const res = await fetch(`${API_URL}${path}`, {
+  const hostname = typeof window !== "undefined" ? window.location.hostname : "";
+
+  const isProductionHost =
+    hostname === "linklang.co.uk" ||
+    hostname === "www.linklang.co.uk" ||
+    hostname.endsWith(".linklang.pages.dev") ||
+    hostname === "cbd5d8f6.linklang.pages.dev";
+
+  const apiBase =
+    import.meta.env.VITE_API_URL ||
+    (isProductionHost ? DEFAULT_PROD_API : DEFAULT_LOCAL_API);
+
+  const res = await fetch(`${apiBase}${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",

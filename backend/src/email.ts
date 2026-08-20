@@ -14,11 +14,21 @@ const STATUS_LABELS: Record<string, string> = {
   CANCELLED: "Anulowane",
 };
 
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[character] || character);
+}
+
 // Email failures must never break the request that triggered them
-async function send(apiKey: string, subject: string, to: string, html: string) {
+async function send(apiKey: string, subject: string, to: string, html: string, replyTo?: string) {
   try {
     const resend = new Resend(apiKey);
-    await resend.emails.send({ from: FROM, to, subject, html });
+    await resend.emails.send({ from: FROM, to, subject, html, ...(replyTo ? { replyTo } : {}) });
   } catch (err) {
     console.error("Failed to send email:", err);
   }
@@ -67,5 +77,27 @@ export function sendPasswordResetEmail(apiKey: string, to: string, name: string,
     "LinkLang - Reset hasła",
     to,
     `<p>Cześć ${name},</p><p>Otrzymaliśmy prośbę o reset hasła do Twojego konta LinkLang.</p><p><a href="${resetLink}" style="background-color: #0f3d2e; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; display: inline-block;">Zmień hasło</a></p><p>Link wygasa za 24 godziny.</p><p>Jeśli nie prosiłeś o reset hasła, zignoruj tę wiadomość.</p>`
+  );
+}
+
+export function sendContactEmail(apiKey: string, to: string, name: string, email: string, message: string) {
+  const safeName = escapeHtml(name);
+  const safeEmail = escapeHtml(email);
+  const safeMessage = escapeHtml(message).replace(/\n/g, "<br>");
+  return send(
+    apiKey,
+    `Nowa wiadomość kontaktowa od ${name}`,
+    to,
+    `<p><strong>Imię i nazwisko:</strong> ${safeName}</p><p><strong>Email:</strong> ${safeEmail}</p><p><strong>Wiadomość:</strong></p><p>${safeMessage}</p>`,
+    email
+  );
+}
+
+export function sendContactConfirmationEmail(apiKey: string, to: string, name: string) {
+  return send(
+    apiKey,
+    "LinkLang - potwierdzenie wiadomości",
+    to,
+    `<p>Cześć ${escapeHtml(name)},</p><p>Dziękujemy za wiadomość. Odpowiemy na nią tak szybko, jak to możliwe.</p><p>If you want, you can also write to meereck@gmail.com.</p><p>Jeśli chcesz, możesz też od razu napisać na meereck@gmail.com.</p>`
   );
 }
