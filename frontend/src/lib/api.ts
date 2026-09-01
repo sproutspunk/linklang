@@ -1,7 +1,7 @@
 import { useAuth } from "./store";
 
 const DEFAULT_LOCAL_API = "http://localhost:8787";
-const DEFAULT_PROD_API = "https://linklang-api-production.sproutspunk.workers.dev";
+const DEFAULT_PROD_API = "https://api.linklang.co.uk";
 
 export async function apiFetch(path: string, options: RequestInit = {}) {
   const token = useAuth.getState().token;
