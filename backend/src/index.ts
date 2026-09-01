@@ -472,7 +472,7 @@ app.post("/api/forgot-password", authRateLimit, async (c) => {
   c.executionCtx.waitUntil(
     (async () => {
       const { sendPasswordResetEmail } = await import("./email.js");
-      sendPasswordResetEmail(c.env.RESEND_API_KEY, user.email, user.name || "Kliencie", resetLink);
+      return sendPasswordResetEmail(c.env.RESEND_API_KEY, user.email, user.name || "Kliencie", resetLink);
     })()
   );
 
