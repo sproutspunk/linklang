@@ -59,7 +59,7 @@ function isAllowedOrigin(origin: string, allowedOrigins: string[]) {
   if (normalized.endsWith(".linklang.pages.dev")) return true;
 
   return allowedOrigins.some((allowed) =>
-    allowed.includes("*") && normalized.endsWith(allowed.replace("*", ""))
+    allowed.includes("*") && normalized.endsWith(allowed.replaceAll("*", ""))
   );
 }
 
