@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { apiFetch } from "../lib/api";
 import { Loader2 } from "lucide-react";
+import PasswordInput from "../components/PasswordInput";
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
@@ -97,28 +98,26 @@ export default function ForgotPassword() {
             <h1 className="text-xl font-bold text-slate-900">Nowe hasło</h1>
             <p className="mt-1 text-sm text-slate-500">Wpisz nowe hasło</p>
             <form onSubmit={handleResetPassword} className="mt-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Nowe hasło</label>
-                <input
-                  type="password"
-                  required
-                  minLength={6}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Potwierdź hasło</label>
-                <input
-                  type="password"
-                  required
-                  minLength={6}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                />
-              </div>
+              <PasswordInput
+                id="new-password"
+                label="Nowe hasło"
+                value={newPassword}
+                onChange={setNewPassword}
+                showLabel="Pokaż hasło"
+                hideLabel="Ukryj hasło"
+                required
+                minLength={8}
+              />
+              <PasswordInput
+                id="confirm-password"
+                label="Potwierdź hasło"
+                value={confirmPassword}
+                onChange={setConfirmPassword}
+                showLabel="Pokaż hasło"
+                hideLabel="Ukryj hasło"
+                required
+                minLength={8}
+              />
               {error && <p className="text-sm text-red-600">{error}</p>}
               {success && <p className="text-sm text-green-600">{success}</p>}
               <button

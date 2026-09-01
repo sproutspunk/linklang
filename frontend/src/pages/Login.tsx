@@ -3,12 +3,15 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/store";
 import { apiFetch } from "../lib/api";
 import { Loader2 } from "lucide-react";
+import PasswordInput from "../components/PasswordInput";
 
 const content = {
   PL: {
     title: "Zaloguj się do konta",
     email: "Email",
     password: "Hasło",
+    showPassword: "Pokaż hasło",
+    hidePassword: "Ukryj hasło",
     signIn: "Zaloguj się",
     forgotPassword: "Zapomniałeś hasła?",
     noAccount: "Nie masz konta?",
@@ -19,6 +22,8 @@ const content = {
     title: "Sign in to your account",
     email: "Email",
     password: "Password",
+    showPassword: "Show password",
+    hidePassword: "Hide password",
     signIn: "Sign in",
     forgotPassword: "Forgot password?",
     noAccount: "Don't have an account?",
@@ -73,11 +78,15 @@ export default function Login() {
             <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700">{t.password}</label>
-            <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" />
-          </div>
+          <PasswordInput
+            id="login-password"
+            label={t.password}
+            value={password}
+            onChange={setPassword}
+            showLabel={t.showPassword}
+            hideLabel={t.hidePassword}
+            required
+          />
           {error && <p className="text-sm text-red-600">{error}</p>}
           <button type="submit" disabled={loading}
             className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50">

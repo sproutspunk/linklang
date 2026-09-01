@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiFetch } from "../lib/api";
 import { Loader2 } from "lucide-react";
+import PasswordInput from "../components/PasswordInput";
 
 const content = {
   PL: {
@@ -10,6 +11,8 @@ const content = {
     name: "Imię i nazwisko",
     email: "Email",
     password: "Hasło",
+    showPassword: "Pokaż hasło",
+    hidePassword: "Ukryj hasło",
     passwordHint: "Min. 8 znaków, duża litera, mała litera, cyfra, znak specjalny",
     passwordPlaceholder: "Min. 8 znaków, duża, mała, cyfra, @!#$%",
     passwordError: "Hasło musi mieć: min. 8 znaków, dużą literę, małą literę, cyfrę i znak specjalny (!@#$%^&*)",
@@ -24,6 +27,8 @@ const content = {
     name: "Full name",
     email: "Email",
     password: "Password",
+    showPassword: "Show password",
+    hidePassword: "Hide password",
     passwordHint: "Min. 8 characters, uppercase, lowercase, number, special character",
     passwordPlaceholder: "Min. 8 chars, uppercase, lowercase, number, @!#$%",
     passwordError: "Password must have: min. 8 characters, uppercase, lowercase, number and special character (!@#$%^&*)",
@@ -106,10 +111,17 @@ export default function Register() {
               className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700">{t.password}</label>
-            <input type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)}
+            <PasswordInput
+              id="register-password"
+              label={t.password}
+              value={password}
+              onChange={setPassword}
+              showLabel={t.showPassword}
+              hideLabel={t.hidePassword}
+              required
+              minLength={8}
               placeholder={t.passwordPlaceholder}
-              className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            />
             <p className="mt-1 text-xs text-slate-500">{t.passwordHint}</p>
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
