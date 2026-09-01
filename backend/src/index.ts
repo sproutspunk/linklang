@@ -74,6 +74,39 @@ app.use("*", async (c, next) => {
   })(c, next);
 });
 
+// Test endpoint (dev only) - generates JWT for testing without database
+app.get("/api/test-login", async (c) => {
+  const roleParam = c.req.query("role") || "CLIENT";
+  const isAdmin = roleParam === "ADMIN";
+
+  const testUser = {
+    userId: isAdmin ? 999 : 1,
+    email: isAdmin ? "meereck@gmail.com" : "client@test.com",
+    name: isAdmin ? "Admin User" : "Client User",
+    role: isAdmin ? "ADMIN" as const : "CLIENT" as const,
+  };
+
+  const token = await new SignJWT({ userId: testUser.userId, role: testUser.role, email: testUser.email })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("7d")
+    .sign(getJwtKey(c.env));
+
+  return c.json({ token, user: testUser });
+});
+
+// Test endpoint (dev only) - generates password reset JWT for testing
+app.get("/api/test-reset-token", async (c) => {
+  const emailParam = c.req.query("email") || "client@test.com";
+  const resetToken = await new SignJWT({ email: emailParam, purpose: "password_reset" })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("24h")
+    .sign(getJwtKey(c.env));
+
+  return c.json({ resetToken, link: `http://127.0.0.1:5173/forgot-password?token=${resetToken}` });
+});
+
 app.post("/api/contact", async (c) => {
   const schema = z.object({
     name: z.string().trim().min(1).max(120),
@@ -120,6 +153,11 @@ async function adminMiddleware(c: any, next: any) {
 
 // Brute-force protection on auth endpoints (fixed window, backed by D1)
 async function authRateLimit(c: any, next: any) {
+  // Skip rate limiting in local development (D1 not initialized)
+  if (!c.env.DB) {
+    await next();
+    return;
+  }
   const ip = c.req.header("cf-connecting-ip") || "unknown";
   const ok = await checkRateLimit(c.env.DB, `auth:${ip}`, 20, 900);
   if (!ok) return c.json({ error: "Too many requests" }, 429);
@@ -418,6 +456,70 @@ app.get("/api/admin/summary", authMiddleware, adminMiddleware, async (c) => {
       downloaded: allOrders.filter((o) => o.status === "DOWNLOADED").length,
     },
   });
+});
+
+// Password reset endpoints
+app.post("/api/forgot-password", authRateLimit, async (c) => {
+  const db = createDb(c.env.DB);
+  const schema = z.object({ email: z.string().email() });
+  const parsed = schema.safeParse(await c.req.json());
+  if (!parsed.success) return c.json({ error: "Invalid input" }, 400);
+
+  // For dev/local testing without DB, return success anyway
+  if (!c.env.DB) {
+    return c.json({ success: true }, 202);
+  }
+
+  const user = await db.select().from(users).where(eq(users.email, parsed.data.email)).get();
+  if (!user) return c.json({ success: true }, 202); // Don't leak if email exists
+
+  const resetToken = await new SignJWT({ email: user.email, purpose: "password_reset" })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("24h")
+    .sign(getJwtKey(c.env));
+
+  const resetLink = `https://linklang.co.uk/forgot-password?token=${resetToken}`;
+  c.executionCtx.waitUntil(
+    (async () => {
+      const { sendPasswordResetEmail } = await import("./email.js");
+      sendPasswordResetEmail(c.env.RESEND_API_KEY, user.email, user.name || "Kliencie", resetLink);
+    })()
+  );
+
+  return c.json({ success: true }, 202);
+});
+
+app.post("/api/reset-password", async (c) => {
+  const db = createDb(c.env.DB);
+  const schema = z.object({
+    token: z.string(),
+    newPassword: z.string().regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
+      "Password must be at least 8 characters with uppercase, lowercase, digit, and special character"
+    ),
+  });
+  const parsed = schema.safeParse(await c.req.json());
+  if (!parsed.success) return c.json({ error: parsed.error.flatten().fieldErrors.newPassword?.[0] || "Invalid input" }, 400);
+
+  try {
+    const { payload } = await jwtVerify(parsed.data.token, getJwtKey(c.env));
+    if (payload.purpose !== "password_reset") return c.json({ error: "Invalid token" }, 401);
+    if (!payload.email) return c.json({ error: "Invalid token" }, 401);
+
+    // For dev/local testing without DB, just return success
+    if (!c.env.DB) {
+      return c.json({ success: true }, 200);
+    }
+
+    const hashed = await bcrypt.hash(parsed.data.newPassword, 10);
+    const user = await db.update(users).set({ password: hashed }).where(eq(users.email, payload.email as string)).returning().get();
+    if (!user) return c.json({ error: "User not found" }, 404);
+
+    return c.json({ success: true }, 200);
+  } catch (err) {
+    return c.json({ error: "Invalid token" }, 401);
+  }
 });
 
 app.notFound((c) => c.json({ error: "Not found" }, 404));

@@ -21,5 +21,8 @@
   },
   "dependencies": {
     "resend": "^6.19.0"
+  },
+  "optionalDependencies": {
+    "@rolldown/binding-linux-x64-gnu": "^1.2.6"
   }
 }
