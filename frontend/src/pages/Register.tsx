@@ -40,6 +40,7 @@ export default function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [website, setWebsite] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -68,7 +69,7 @@ export default function Register() {
     try {
       await apiFetch("/api/register", {
         method: "POST",
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, password, website }),
       });
       navigate("/login");
     } catch (err: any) {
@@ -87,6 +88,17 @@ export default function Register() {
             <label className="block text-sm font-medium text-slate-700">{t.name}</label>
             <input required value={name} onChange={(e) => setName(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+          </div>
+          <div className="hidden" aria-hidden="true">
+            <label htmlFor="register-website">Website</label>
+            <input
+              id="register-website"
+              name="website"
+              tabIndex={-1}
+              autoComplete="off"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700">{t.email}</label>

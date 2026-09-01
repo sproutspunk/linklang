@@ -171,7 +171,7 @@ export default function Home() {
     return () => window.removeEventListener("languageChange", handleLanguageChange);
   }, []);
 
-  const [contactForm, setContactForm] = useState({ name: "", email: "", message: "" });
+  const [contactForm, setContactForm] = useState({ name: "", email: "", message: "", website: "" });
   const [contactSubmitted, setContactSubmitted] = useState(false);
   const [contactSubmitting, setContactSubmitting] = useState(false);
   const [contactError, setContactError] = useState<string | null>(null);
@@ -197,7 +197,7 @@ export default function Home() {
       }
       
       setContactSubmitted(true);
-      setContactForm({ name: "", email: "", message: "" });
+      setContactForm({ name: "", email: "", message: "", website: "" });
       setTimeout(() => {
         setContactSubmitted(false);
       }, 3000);
@@ -327,6 +327,17 @@ export default function Home() {
                 value={contactForm.email}
                 onChange={(e) => setContactForm({...contactForm, email: e.target.value})}
                 className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-brand-600 focus:outline-none"
+              />
+            </div>
+            <div className="hidden" aria-hidden="true">
+              <label htmlFor="contact-website">Website</label>
+              <input
+                id="contact-website"
+                name="website"
+                tabIndex={-1}
+                autoComplete="off"
+                value={contactForm.website}
+                onChange={(e) => setContactForm({...contactForm, website: e.target.value})}
               />
             </div>
             <div>

@@ -100,9 +100,17 @@ app.post("/api/contact", async (c) => {
     name: z.string().trim().min(1).max(120),
     email: z.string().trim().email(),
     message: z.string().trim().min(1).max(5000),
+    website: z.string().optional(),
   });
   const parsed = schema.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json({ error: "Invalid input" }, 400);
+  if (parsed.data.website) return c.json({ success: true }, 202);
+
+  if (c.env.DB) {
+    const ip = c.req.header("cf-connecting-ip") || "unknown";
+    const ok = await checkRateLimit(c.env.DB, `contact:${ip}`, 5, 900);
+    if (!ok) return c.json({ error: "Too many requests" }, 429);
+  }
 
   const contactInbox = c.env.CONTACT_INBOX_EMAIL || "hello@linklang.co.uk";
 
@@ -160,10 +168,11 @@ app.post("/api/register", authRateLimit, async (c) => {
     name: z.string().min(1),
     email: z.string().email(),
     password: z.string().regex(passwordRegex, "Password must be at least 8 characters with uppercase, lowercase, digit, and special character"),
-    captchaToken: z.string().optional(),
+    website: z.string().optional(),
   });
   const parsed = schema.safeParse(await c.req.json());
   if (!parsed.success) return c.json({ error: parsed.error.flatten().fieldErrors.password?.[0] || "Invalid input" }, 400);
+  if (parsed.data.website) return c.json({ id: 0, email: parsed.data.email, name: parsed.data.name, role: "CLIENT" }, 201);
 
   const existing = await db.select().from(users).where(eq(users.email, parsed.data.email)).get();
   if (existing) return c.json({ error: "Email already exists" }, 409);
