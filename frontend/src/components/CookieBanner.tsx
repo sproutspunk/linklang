@@ -69,6 +69,15 @@ export default function CookieBanner() {
       analytics: true,
       marketing: true,
     }));
+    
+    // GA4 tracking
+    if (window.gtag) {
+      window.gtag('event', 'page_view');
+      window.gtag('event', 'cookie_consent', {
+        cookie_type: 'all_accepted'
+      });
+    }
+    
     setIsVisible(false);
   }
 

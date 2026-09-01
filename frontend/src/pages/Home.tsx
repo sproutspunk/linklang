@@ -186,6 +186,16 @@ export default function Home() {
         method: "POST",
         body: JSON.stringify(contactForm),
       });
+      
+      // GA4 tracking
+      if (window.gtag) {
+        window.gtag('event', 'generate_lead', {
+          value: 1.0,
+          currency: 'GBP',
+          method: 'contact_form'
+        });
+      }
+      
       setContactSubmitted(true);
       setContactForm({ name: "", email: "", message: "" });
       setTimeout(() => {
