@@ -246,7 +246,12 @@ npx wrangler secret put JWT_SECRET --env production
 npx wrangler secret put RESEND_API_KEY --env production
 ```
 
-3. **Configure CORS**:
+3. **Configure email delivery**:
+   - Verify `linklang.co.uk` as a sender domain in Resend.
+   - Ensure the DNS records required by Resend are active.
+   - The Worker sends from `LinkLang <hello@linklang.co.uk>`.
+
+4. **Configure CORS**:
 Update `wrangler.toml`:
 ```toml
 [env.production]
