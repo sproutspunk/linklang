@@ -42,29 +42,48 @@ const defaultAllowedOrigins = [
   "https://www.linklang.co.uk",
 ];
 
-app.use("*", secureHeaders());
-app.use("*", async (c, next) => {
-  const configured = (c.env.CORS_ORIGIN || "")
+function getAllowedOrigins(env: Bindings) {
+  const configured = (env.CORS_ORIGIN || "")
     .split(",")
-    .map((o) => o.trim())
+    .map((origin) => origin.trim().toLowerCase())
     .filter(Boolean);
 
-  const allowedOrigins = Array.from(new Set([...configured, ...defaultAllowedOrigins]));
+  return Array.from(new Set([...configured, ...defaultAllowedOrigins]));
+}
+
+function isAllowedOrigin(origin: string, allowedOrigins: string[]) {
+  const normalized = origin.toLowerCase();
+
+  if (allowedOrigins.includes(normalized)) return true;
+
+  if (normalized.endsWith(".linklang.pages.dev")) return true;
+
+  return allowedOrigins.some((allowed) =>
+    allowed.includes("*") && normalized.endsWith(allowed.replace("*", ""))
+  );
+}
+
+function getFrontendOrigin(c: any) {
+  const allowedOrigins = getAllowedOrigins(c.env);
+  const origin = c.req.header("origin");
+
+  if (origin && isAllowedOrigin(origin, allowedOrigins)) {
+    return origin.toLowerCase();
+  }
+
+  return allowedOrigins.find((allowed) => allowed.startsWith("https://")) || "https://linklang.co.uk";
+}
+
+app.use("*", secureHeaders());
+app.use("*", async (c, next) => {
+  const allowedOrigins = getAllowedOrigins(c.env);
 
   return cors({
     origin: (origin) => {
-      if (!origin) return "http://localhost:5173";
+      if (!origin) return allowedOrigins[0];
       const normalized = origin.toLowerCase();
 
-      if (allowedOrigins.includes(normalized)) return normalized;
-
-      const wildcardMatch = allowedOrigins.some((allowed) =>
-        allowed.includes("*") && normalized.endsWith(allowed.replace("*", ""))
-      );
-
-      if (wildcardMatch) return normalized;
-
-      if (normalized.endsWith(".linklang.pages.dev")) return normalized;
+      if (isAllowedOrigin(normalized, allowedOrigins)) return normalized;
 
       return allowedOrigins[0];
     },
@@ -448,7 +467,7 @@ app.post("/api/forgot-password", authRateLimit, async (c) => {
     .setExpirationTime("24h")
     .sign(getJwtKey(c.env));
 
-  const frontendOrigin = c.req.header("origin") || "https://linklang.co.uk";
+  const frontendOrigin = getFrontendOrigin(c);
   const resetLink = `${frontendOrigin}/forgot-password?token=${resetToken}`;
   c.executionCtx.waitUntil(
     (async () => {
