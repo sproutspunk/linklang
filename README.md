@@ -17,6 +17,7 @@ LinkLang is a professional translation services platform that connects clients w
 - **Secure Authentication**: JWT-based auth with strong password requirements (8+ chars, uppercase, lowercase, numbers, special chars)
 - **Real-time Communication**: Messaging system between clients and service providers
 - **Password Reset**: Email-based password reset flow
+- **Account Password Change**: Authenticated users can change passwords from their panels
 - **Admin Dashboard**: Comprehensive order and client management
 - **Multi-language Support**: Full PL/EN translations throughout the platform
 - **Cookie Management**: Transparent cookie preferences with GDPR compliance
@@ -303,6 +304,7 @@ vars = { CORS_ORIGIN = "https://linklang.co.uk" }
 - `POST /api/register` - User registration
 - `POST /api/login` - User login
 - `GET /api/me` - Get current user info
+- `POST /api/change-password` - Change password for the authenticated user
 - `POST /api/forgot-password` - Request password reset email
 - `POST /api/reset-password` - Set a new password with reset token
 

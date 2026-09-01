@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiFetch } from "../lib/api";
 import { formatDate, formatCurrency } from "../lib/utils";
+import ChangePasswordForm from "../components/ChangePasswordForm";
 import {
   FileText, Users, Phone, Building2, Landmark,
   Plus, ChevronRight, Loader2,
@@ -58,6 +59,8 @@ export default function Portal() {
           <Plus className="h-4 w-4" /> Nowe zlecenie
         </Link>
       </div>
+
+      <ChangePasswordForm />
 
       {loading ? (
         <div className="mt-10 flex justify-center"><Loader2 className="h-6 w-6 animate-spin text-brand-600" /></div>

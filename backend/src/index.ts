@@ -221,6 +221,31 @@ app.get("/api/me", authMiddleware, async (c) => {
   return c.json({ id: dbUser.id, email: dbUser.email, name: dbUser.name, role: dbUser.role });
 });
 
+app.post("/api/change-password", authMiddleware, authRateLimit, async (c) => {
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+  const schema = z.object({
+    currentPassword: z.string().min(1),
+    newPassword: z.string().regex(passwordRegex, "Password must be at least 8 characters with uppercase, lowercase, digit, and special character"),
+  });
+  const parsed = schema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ error: parsed.error.flatten().fieldErrors.newPassword?.[0] || "Invalid input" }, 400);
+
+  if (!c.env.DB) return c.json({ success: true });
+
+  const authUser = c.get("user");
+  const db = createDb(c.env.DB);
+  const user = await db.select().from(users).where(eq(users.id, authUser.userId)).get();
+  if (!user || !user.password) return c.json({ error: "User not found" }, 404);
+
+  const valid = await bcrypt.compare(parsed.data.currentPassword, user.password);
+  if (!valid) return c.json({ error: "Current password is incorrect" }, 400);
+
+  const hashed = await bcrypt.hash(parsed.data.newPassword, 10);
+  await db.update(users).set({ password: hashed }).where(eq(users.id, authUser.userId)).run();
+
+  return c.json({ success: true });
+});
+
 // Orders
 app.get("/api/orders", authMiddleware, async (c) => {
   const db = createDb(c.env.DB);

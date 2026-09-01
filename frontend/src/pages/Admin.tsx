@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiFetch } from "../lib/api";
 import { formatDate, formatCurrency } from "../lib/utils";
+import ChangePasswordForm from "../components/ChangePasswordForm";
 import { Loader2, ExternalLink, PoundSterling, MessageSquare } from "lucide-react";
 
 const statuses = ["ALL", "NEW", "UNDER_REVIEW", "QUOTE_SENT", "APPROVED", "PAID", "IN_PROGRESS", "READY", "DOWNLOADED", "CANCELLED"];
@@ -68,6 +69,8 @@ export default function Admin() {
           </div>
         )}
       </div>
+
+      <ChangePasswordForm />
 
       <div className="mt-6 flex flex-wrap gap-2">
         {statuses.map((s) => (
