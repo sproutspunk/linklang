@@ -11,8 +11,6 @@ import Portal from "./pages/Portal";
 import NewOrder from "./pages/NewOrder";
 import OrderDetail from "./pages/OrderDetail";
 import Admin from "./pages/Admin";
-import DevLogin from "./pages/DevLogin";
-
 function ProtectedRoute({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
@@ -25,7 +23,6 @@ export default function App() {
     <Routes>
       <Route element={<Layout />}>
         <Route path="/" element={<Home />} />
-        <Route path="/dev" element={<DevLogin />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />

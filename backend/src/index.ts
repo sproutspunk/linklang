@@ -74,38 +74,7 @@ app.use("*", async (c, next) => {
   })(c, next);
 });
 
-// Test endpoint (dev only) - generates JWT for testing without database
-app.get("/api/test-login", async (c) => {
-  const roleParam = c.req.query("role") || "CLIENT";
-  const isAdmin = roleParam === "ADMIN";
 
-  const testUser = {
-    userId: isAdmin ? 999 : 1,
-    email: isAdmin ? "meereck@gmail.com" : "client@test.com",
-    name: isAdmin ? "Admin User" : "Client User",
-    role: isAdmin ? "ADMIN" as const : "CLIENT" as const,
-  };
-
-  const token = await new SignJWT({ userId: testUser.userId, role: testUser.role, email: testUser.email })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime("7d")
-    .sign(getJwtKey(c.env));
-
-  return c.json({ token, user: testUser });
-});
-
-// Test endpoint (dev only) - generates password reset JWT for testing
-app.get("/api/test-reset-token", async (c) => {
-  const emailParam = c.req.query("email") || "client@test.com";
-  const resetToken = await new SignJWT({ email: emailParam, purpose: "password_reset" })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime("24h")
-    .sign(getJwtKey(c.env));
-
-  return c.json({ resetToken, link: `http://127.0.0.1:5173/forgot-password?token=${resetToken}` });
-});
 
 app.post("/api/contact", async (c) => {
   const schema = z.object({
@@ -479,7 +448,8 @@ app.post("/api/forgot-password", authRateLimit, async (c) => {
     .setExpirationTime("24h")
     .sign(getJwtKey(c.env));
 
-  const resetLink = `https://linklang.co.uk/forgot-password?token=${resetToken}`;
+  const frontendOrigin = c.req.header("origin") || "https://linklang.co.uk";
+  const resetLink = `${frontendOrigin}/forgot-password?token=${resetToken}`;
   c.executionCtx.waitUntil(
     (async () => {
       const { sendPasswordResetEmail } = await import("./email.js");
