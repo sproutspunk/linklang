@@ -214,6 +214,11 @@ Triggered via Resend API:
 
 ## 🌐 Deployment
 
+Deploys to production happen automatically via `.github/workflows/deploy.yml`
+on every push to `main` (applies D1 migrations remotely, then deploys the
+Worker and Pages sites). Manual deploys remain available for local
+troubleshooting:
+
 ### Frontend (Cloudflare Pages)
 
 ```bash
@@ -225,8 +230,17 @@ npx wrangler pages deploy dist
 ### Backend (Cloudflare Workers)
 
 ```bash
-# Run from the repository root
+# Run from the repository root — wrangler.toml only defines [env.production],
+# so --env production is required (there is no default environment anymore).
 npx wrangler deploy --env production
+```
+
+To confirm which commit is actually live on `api.linklang.co.uk` (proves the
+CI deploy ran and includes your latest change):
+
+```bash
+curl -s https://api.linklang.co.uk/api/_diag/version
+# {"commit":"<sha>","hasForgotPasswordFix":true,"timestamp":"<build time>"}
 ```
 
 ### Environment Setup (Production)
@@ -237,12 +251,25 @@ npx wrangler deploy --env production
 npx wrangler secret put JWT_SECRET --env production
 npx wrangler secret put RESEND_API_KEY --env production
 ```
+3. **GitHub Actions** repo secrets/vars: `CLOUDFLARE_API_TOKEN`,
+   `CLOUDFLARE_ACCOUNT_ID` (secret or repo variable), optional
+   `VITE_API_URL`, `CLOUDFLARE_PAGES_PROJECT`.
 
-3. **Configure CORS**:
+4. **Configure CORS**:
 Update `wrangler.toml`:
 ```toml
 [env.production]
 vars = { CORS_ORIGIN = "https://linklang.co.uk" }
+```
+
+5. **Apply D1 migrations on remote** (also done automatically by CI on every
+   push to `main`, but useful to run manually / verify):
+```bash
+npx wrangler d1 migrations apply linklang-db --remote --env production
+
+# Verify no legacy mixed-case emails remain (must return 0):
+npx wrangler d1 execute linklang-db --remote --env production \
+  --command "SELECT COUNT(*) AS mixed FROM users WHERE email != LOWER(email)"
 ```
 
 ---

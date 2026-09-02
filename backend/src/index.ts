@@ -16,6 +16,11 @@ type Bindings = {
   RESEND_API_KEY: string;
   CORS_ORIGIN: string;
   CONTACT_INBOX_EMAIL?: string;
+  // Injected at deploy time via `wrangler deploy --var GIT_COMMIT_SHA:... --var BUILD_TIME:...`
+  // (see .github/workflows/deploy.yml). Used only by GET /api/_diag/version to prove which
+  // commit is actually running on api.linklang.co.uk.
+  GIT_COMMIT_SHA?: string;
+  BUILD_TIME?: string;
 };
 
 type UserPayload = { userId: number; role: "CLIENT" | "ADMIN"; email: string };
@@ -134,6 +139,17 @@ async function authRateLimit(c: any, next: any) {
   if (!ok) return c.json({ error: "Too many requests" }, 429);
   await next();
 }
+
+// Diagnostic endpoint: proves which commit is actually deployed behind api.linklang.co.uk.
+// `hasForgotPasswordFix` is a hardcoded marker for the case-insensitive email lookup fix
+// (PR #9) — if this endpoint is reachable at all, that fix is present in this build.
+app.get("/api/_diag/version", (c) => {
+  return c.json({
+    commit: c.env.GIT_COMMIT_SHA || "unknown",
+    hasForgotPasswordFix: true,
+    timestamp: c.env.BUILD_TIME || "unknown",
+  });
+});
 
 // Auth routes
 app.post("/api/register", authRateLimit, async (c) => {
@@ -439,9 +455,21 @@ app.get("/api/admin/summary", authMiddleware, adminMiddleware, async (c) => {
 
 // Password reset endpoints
 app.post("/api/forgot-password", authRateLimit, async (c) => {
+  let rawBody: unknown = null;
+  try {
+    rawBody = await c.req.json();
+  } catch {
+    // Malformed/empty JSON body — logged below, handled as invalid input.
+  }
+  console.log("[forgot-password] entry", {
+    hasBody: rawBody !== null,
+    emailPresent: !!(rawBody as { email?: unknown } | null)?.email,
+    origin: c.req.header("origin"),
+  });
+
   const db = createDb(c.env.DB);
   const schema = z.object({ email: z.string().trim().toLowerCase().email() });
-  const parsed = schema.safeParse(await c.req.json());
+  const parsed = schema.safeParse(rawBody);
   if (!parsed.success) return c.json({ error: "Invalid input" }, 400);
 
   // For dev/local testing without DB, return success anyway

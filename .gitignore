@@ -8,6 +8,9 @@ build/
 !.env.example
 !.env.production.example
 .dev.vars
+.dev.vars.*
+!.dev.vars.example
+!.dev.vars.*.example
 
 # Cloudflare Workers local dev state
 .wrangler/
