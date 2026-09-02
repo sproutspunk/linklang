@@ -26,7 +26,7 @@ export default function ForgotPassword() {
         method: "POST",
         body: JSON.stringify({ email }),
       });
-      setSuccess("Email z linkiem do resetowania hasła wysłany!");
+      setSuccess("Jeśli konto z tym adresem istnieje, wyślemy link do resetowania hasła.");
       setEmail("");
     } catch (err: any) {
       setError(err.message || "Błąd przy wysyłaniu emaila");
