@@ -50,7 +50,6 @@ LinkLang is a professional translation services platform that connects clients w
 - Cloudflare Workers (serverless backend)
 - Cloudflare Pages (frontend hosting)
 - Cloudflare D1 (SQLite database)
-- hCaptcha (bot prevention)
 
 ---
 
@@ -74,7 +73,7 @@ linklang-vite/
 │   │   ├── pages/             # Route pages
 │   │   │   ├── Home.tsx       # Landing page
 │   │   │   ├── Login.tsx      # Login page
-│   │   │   ├── Register.tsx   # Registration with hCaptcha
+│   │   │   ├── Register.tsx       # Registration
 │   │   │   ├── ForgotPassword.tsx
 │   │   │   ├── Privacy.tsx    # Privacy policy
 │   │   │   ├── Terms.tsx      # Terms & conditions
@@ -192,7 +191,6 @@ CANCELLED
 - **Password Requirements**: 8+ characters, uppercase, lowercase, number, special character
 - **JWT Authentication**: 7-day token expiration
 - **Rate Limiting**: Anti-brute-force protection (20 requests/900s on auth endpoints)
-- **hCaptcha Integration**: Bot prevention on registration
 - **HTTPS**: All production traffic encrypted
 - **CORS Protection**: Configurable allowed origins
 - **Input Validation**: Zod schema validation on all endpoints
@@ -227,7 +225,7 @@ npx wrangler pages deploy dist
 ### Backend (Cloudflare Workers)
 
 ```bash
-cd backend
+# Run from the repository root
 npx wrangler deploy --env production
 ```
 
@@ -289,7 +287,7 @@ vars = { CORS_ORIGIN = "https://linklang.co.uk" }
 ## 🔄 API Endpoints
 
 ### Authentication
-- `POST /api/register` - User registration with hCaptcha
+- `POST /api/register` - User registration
 - `POST /api/login` - User login
 - `GET /api/me` - Get current user info
 

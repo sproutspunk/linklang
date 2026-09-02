@@ -49,7 +49,9 @@ app.use("*", async (c, next) => {
     .map((o) => o.trim())
     .filter(Boolean);
 
-  const allowedOrigins = Array.from(new Set([...configured, ...defaultAllowedOrigins]));
+  const allowedOrigins = configured.length > 0
+    ? Array.from(new Set(configured.map((origin) => origin.toLowerCase())))
+    : defaultAllowedOrigins;
 
   return cors({
     origin: (origin) => {
@@ -64,7 +66,7 @@ app.use("*", async (c, next) => {
 
       if (wildcardMatch) return normalized;
 
-      if (normalized.endsWith(".linklang.pages.dev")) return normalized;
+      if (normalized.endsWith(".linklang.pages.dev") && configured.length === 0) return normalized;
 
       return allowedOrigins[0];
     },
@@ -76,7 +78,7 @@ app.use("*", async (c, next) => {
 
 
 
-app.post("/api/contact", async (c) => {
+app.post("/api/contact", authRateLimit, async (c) => {
   const schema = z.object({
     name: z.string().trim().min(1).max(120),
     email: z.string().trim().email(),
@@ -128,7 +130,7 @@ async function authRateLimit(c: any, next: any) {
     return;
   }
   const ip = c.req.header("cf-connecting-ip") || "unknown";
-  const ok = await checkRateLimit(c.env.DB, `auth:${ip}`, 20, 900);
+  const ok = await checkRateLimit(c.env.DB, `rate:${c.req.path}:${ip}`, 20, 900);
   if (!ok) return c.json({ error: "Too many requests" }, 429);
   await next();
 }
@@ -319,7 +321,7 @@ app.post("/api/quotes", authMiddleware, adminMiddleware, async (c) => {
   const user = c.get("user");
   const schema = z.object({
     orderId: z.number(),
-    amount: z.number(),
+    amount: z.number().finite().positive().max(1000000),
     notes: z.string().optional(),
   });
   const parsed = schema.safeParse(await c.req.json());
@@ -448,7 +450,14 @@ app.post("/api/forgot-password", authRateLimit, async (c) => {
     .setExpirationTime("24h")
     .sign(getJwtKey(c.env));
 
-  const frontendOrigin = c.req.header("origin") || "https://linklang.co.uk";
+  const requestedOrigin = c.req.header("origin")?.replace(/\/$/, "");
+  const configuredFrontendOrigins = (c.env.CORS_ORIGIN || "https://linklang.co.uk,https://www.linklang.co.uk")
+    .split(",")
+    .map((origin) => origin.trim().replace(/\/$/, ""))
+    .filter(Boolean);
+  const frontendOrigin = requestedOrigin && configuredFrontendOrigins.includes(requestedOrigin)
+    ? requestedOrigin
+    : "https://linklang.co.uk";
   const resetLink = `${frontendOrigin}/forgot-password?token=${resetToken}`;
   c.executionCtx.waitUntil(
     sendPasswordResetEmail(c.env.RESEND_API_KEY, user.email, user.name || "Kliencie", resetLink)
