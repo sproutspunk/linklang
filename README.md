@@ -214,25 +214,76 @@ Triggered via Resend API:
 
 ## 🌐 Deployment
 
-### Frontend (Cloudflare Pages)
+### Architecture
 
+```
+GitHub (main branch)
+        │
+        ▼
+GitHub Actions (.github/workflows/deploy.yml)
+        │
+        ├── deploy-backend  ──▶  Cloudflare Workers ("linklang-api")
+        │                        + Cloudflare D1 ("linklang-db")
+        │
+        └── deploy-frontend ──▶  Cloudflare Pages ("linklang")
+```
+
+- The **backend** is a Hono app deployed as a single Cloudflare Worker (see `wrangler.toml`), backed by a Cloudflare D1 database. Migrations are applied automatically before each deploy.
+- The **frontend** is a static Vite/React build deployed to Cloudflare Pages. Client-side routing is handled via `frontend/public/_redirects` (SPA fallback to `index.html`).
+- Every push to `main` triggers both deploy jobs. Every pull request against `main` triggers a **Cloudflare Pages preview deploy** (branch alias `pr-<number>`) so reviewers can see frontend changes live before merging; PRs from forks are skipped since they don't have access to repository secrets.
+
+### Manual Deployment
+
+**Frontend (Cloudflare Pages)**
 ```bash
 cd frontend
 npm run build
-npx wrangler pages deploy dist
+npx wrangler pages deploy dist --project-name=linklang
 ```
 
-### Backend (Cloudflare Workers)
-
+**Backend (Cloudflare Workers)**
 ```bash
 # Run from the repository root
+npx wrangler d1 migrations apply linklang-db --remote --env production
 npx wrangler deploy --env production
 ```
+
+### CI/CD (GitHub Actions)
+
+The workflow at [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) automates the steps above:
+
+| Job | Trigger | What it does |
+|-----|---------|---------------|
+| `deploy-backend` | push to `main` | Typechecks, applies D1 migrations, runs `wrangler deploy --env production` |
+| `deploy-frontend` | push to `main` | Builds `frontend`, runs `wrangler pages deploy` to the production branch |
+| `preview-frontend` | pull requests targeting `main` (same-repo only) | Builds `frontend`, deploys a Cloudflare Pages preview for the PR |
+
+#### Required GitHub secrets
+
+Set these under **Settings → Secrets and variables → Actions → Secrets** on the repository:
+
+| Secret | Purpose |
+|--------|---------|
+| `CLOUDFLARE_API_TOKEN` | Cloudflare API token with `Workers Scripts:Edit`, `D1:Edit`, and `Cloudflare Pages:Edit` permissions for the target account |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID that owns the Worker, D1 database, and Pages project. Account IDs aren't credentials on their own, so this can instead be set as the `CLOUDFLARE_ACCOUNT_ID` repository **variable** if preferred — the workflow falls back to it when the secret is unset |
+
+#### Optional GitHub repository variables
+
+Set these under **Settings → Secrets and variables → Actions → Variables** (not required — sensible defaults are used if omitted):
+
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `CLOUDFLARE_ACCOUNT_ID` | Alternative to the `CLOUDFLARE_ACCOUNT_ID` secret above | (unset — secret is used instead) |
+| `CLOUDFLARE_PAGES_PROJECT` | Name of the Cloudflare Pages project | `linklang` |
+| `VITE_API_URL` | Backend URL baked into the production frontend build | (unset — configure in Pages project settings or here) |
+| `VITE_API_URL_PREVIEW` | Backend URL baked into PR preview builds | falls back to `VITE_API_URL` |
+
+Worker secrets (`JWT_SECRET`, `RESEND_API_KEY`) are **not** managed by CI — they must be set once directly on the Worker via `wrangler secret put` (see below), so they persist independently of deploys.
 
 ### Environment Setup (Production)
 
 1. **Cloudflare Dashboard** → Workers & Pages → Settings
-2. Set secrets:
+2. Set Worker secrets:
 ```bash
 npx wrangler secret put JWT_SECRET --env production
 npx wrangler secret put RESEND_API_KEY --env production
@@ -244,6 +295,21 @@ Update `wrangler.toml`:
 [env.production]
 vars = { CORS_ORIGIN = "https://linklang.co.uk" }
 ```
+
+4. **Create the Cloudflare Pages project** (one-time, first deploy only):
+```bash
+npx wrangler pages project create linklang --production-branch=main
+```
+
+### Rollback & Troubleshooting
+
+- **Roll back the Worker**: Cloudflare Dashboard → Workers & Pages → `linklang-api` → Deployments → select a previous deployment → **Rollback**, or redeploy an older commit with `npx wrangler deploy --env production` after checking it out.
+- **Roll back Pages**: Cloudflare Dashboard → Workers & Pages → `linklang` → Deployments → select a previous deployment → **Rollback to this deployment**.
+- **Deploy fails with authentication error**: verify `CLOUDFLARE_API_TOKEN` has not expired and has the required scopes; verify `CLOUDFLARE_ACCOUNT_ID` matches the account owning the Worker/D1/Pages resources.
+- **`CLOUDFLARE_ACCOUNT_ID is EMPTY` in the debug step**: the value isn't set as either a repository secret or variable — add it under **Settings → Secrets and variables → Actions**, in either the Secrets or Variables tab.
+- **Migrations fail in CI**: run `npx wrangler d1 migrations apply linklang-db --remote --env production` locally with the same token to inspect the error; migrations are idempotent, so re-running the workflow after a fix is safe.
+- **Frontend shows CORS errors**: confirm `CORS_ORIGIN` in `wrangler.toml` (`[env.production]`) includes the exact Pages/domain origin used by the browser.
+- **Preview deploy skipped on a PR**: this is expected for PRs opened from forks, since GitHub does not expose repository secrets to fork workflows for security reasons; deploy manually if needed.
 
 ---
 
