@@ -1,4 +1,6 @@
-# Copy to .dev.vars for local `wrangler dev` (never commit the real .dev.vars file)
+# Copy to .dev.vars.production in the REPOSITORY ROOT (next to wrangler.toml) for local
+# `wrangler dev --env production` (never commit the real .dev.vars.production file).
+# wrangler.toml now defines only [env.production], so the env-specific file name is required.
 # Generate JWT_SECRET with: node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 JWT_SECRET=
 RESEND_API_KEY=

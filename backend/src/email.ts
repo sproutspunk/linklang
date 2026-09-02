@@ -27,7 +27,14 @@ function escapeHtml(value: string) {
 async function send(apiKey: string, subject: string, to: string, html: string, replyTo?: string): Promise<boolean> {
   try {
     const resend = new Resend(apiKey);
+    console.log("[email.send] calling resend", { to, subject, hasKey: !!apiKey });
     const { error } = await resend.emails.send({ from: FROM, to, subject, html, ...(replyTo ? { replyTo } : {}) });
+    console.log("[email.send] result", {
+      success: !error,
+      errorName: error?.name,
+      errorMessage: error?.message,
+      statusCode: (error as { statusCode?: number } | null)?.statusCode,
+    });
     if (error) {
       console.error("Failed to send email:", error);
       return false;

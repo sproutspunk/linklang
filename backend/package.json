@@ -3,14 +3,14 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
+    "dev": "wrangler dev --env production",
+    "deploy": "wrangler deploy --env production",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
-    "db:migrate:local": "wrangler d1 migrations apply linklang-db --local",
-    "db:migrate:remote": "wrangler d1 migrations apply linklang-db --remote",
-    "db:seed:local": "node scripts/generate-seed.mjs && wrangler d1 execute linklang-db --local --file=./drizzle/seed.sql",
-    "db:seed:remote": "node scripts/generate-seed.mjs && wrangler d1 execute linklang-db --remote --file=./drizzle/seed.sql"
+    "db:migrate:local": "wrangler d1 migrations apply linklang-db --local --env production",
+    "db:migrate:remote": "wrangler d1 migrations apply linklang-db --remote --env production",
+    "db:seed:local": "node scripts/generate-seed.mjs && wrangler d1 execute linklang-db --local --env production --file=./drizzle/seed.sql",
+    "db:seed:remote": "node scripts/generate-seed.mjs && wrangler d1 execute linklang-db --remote --env production --file=./drizzle/seed.sql"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
