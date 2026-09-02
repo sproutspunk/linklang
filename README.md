@@ -265,7 +265,7 @@ Set these under **Settings → Secrets and variables → Actions → Secrets** o
 | Secret | Purpose |
 |--------|---------|
 | `CLOUDFLARE_API_TOKEN` | Cloudflare API token with `Workers Scripts:Edit`, `D1:Edit`, and `Cloudflare Pages:Edit` permissions for the target account |
-| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID that owns the Worker, D1 database, and Pages project |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID that owns the Worker, D1 database, and Pages project. Account IDs aren't credentials on their own, so this can instead be set as the `CLOUDFLARE_ACCOUNT_ID` repository **variable** if preferred — the workflow falls back to it when the secret is unset |
 
 #### Optional GitHub repository variables
 
@@ -273,6 +273,7 @@ Set these under **Settings → Secrets and variables → Actions → Variables**
 
 | Variable | Purpose | Default |
 |----------|---------|---------|
+| `CLOUDFLARE_ACCOUNT_ID` | Alternative to the `CLOUDFLARE_ACCOUNT_ID` secret above | (unset — secret is used instead) |
 | `CLOUDFLARE_PAGES_PROJECT` | Name of the Cloudflare Pages project | `linklang` |
 | `VITE_API_URL` | Backend URL baked into the production frontend build | (unset — configure in Pages project settings or here) |
 | `VITE_API_URL_PREVIEW` | Backend URL baked into PR preview builds | falls back to `VITE_API_URL` |
@@ -305,6 +306,7 @@ npx wrangler pages project create linklang --production-branch=main
 - **Roll back the Worker**: Cloudflare Dashboard → Workers & Pages → `linklang-api` → Deployments → select a previous deployment → **Rollback**, or redeploy an older commit with `npx wrangler deploy --env production` after checking it out.
 - **Roll back Pages**: Cloudflare Dashboard → Workers & Pages → `linklang` → Deployments → select a previous deployment → **Rollback to this deployment**.
 - **Deploy fails with authentication error**: verify `CLOUDFLARE_API_TOKEN` has not expired and has the required scopes; verify `CLOUDFLARE_ACCOUNT_ID` matches the account owning the Worker/D1/Pages resources.
+- **`CLOUDFLARE_ACCOUNT_ID is EMPTY` in the debug step**: the value isn't set as either a repository secret or variable — add it under **Settings → Secrets and variables → Actions**, in either the Secrets or Variables tab.
 - **Migrations fail in CI**: run `npx wrangler d1 migrations apply linklang-db --remote --env production` locally with the same token to inspect the error; migrations are idempotent, so re-running the workflow after a fix is safe.
 - **Frontend shows CORS errors**: confirm `CORS_ORIGIN` in `wrangler.toml` (`[env.production]`) includes the exact Pages/domain origin used by the browser.
 - **Preview deploy skipped on a PR**: this is expected for PRs opened from forks, since GitHub does not expose repository secrets to fork workflows for security reasons; deploy manually if needed.

@@ -34,7 +34,7 @@ jobs:
       - name: Debug Cloudflare secrets presence
         env:
           TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           if [ -z "$TOKEN" ]; then
             echo "::error::CLOUDFLARE_API_TOKEN is EMPTY — secret not available to this job"
@@ -43,7 +43,7 @@ jobs:
             echo "✅ CLOUDFLARE_API_TOKEN is set (length: ${#TOKEN})"
           fi
           if [ -z "$ACCOUNT" ]; then
-            echo "::error::CLOUDFLARE_ACCOUNT_ID is EMPTY"
+            echo "::error::CLOUDFLARE_ACCOUNT_ID is EMPTY — set it as a repository secret or variable"
             exit 1
           else
             echo "✅ CLOUDFLARE_ACCOUNT_ID is set (length: ${#ACCOUNT})"
@@ -53,14 +53,14 @@ jobs:
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
           command: d1 migrations apply linklang-db --remote --env production
 
       - name: Deploy Worker
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy --env production
 
   deploy-frontend:
@@ -89,7 +89,7 @@ jobs:
       - name: Debug Cloudflare secrets presence
         env:
           TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           if [ -z "$TOKEN" ]; then
             echo "::error::CLOUDFLARE_API_TOKEN is EMPTY — secret not available to this job"
@@ -98,7 +98,7 @@ jobs:
             echo "✅ CLOUDFLARE_API_TOKEN is set (length: ${#TOKEN})"
           fi
           if [ -z "$ACCOUNT" ]; then
-            echo "::error::CLOUDFLARE_ACCOUNT_ID is EMPTY"
+            echo "::error::CLOUDFLARE_ACCOUNT_ID is EMPTY — set it as a repository secret or variable"
             exit 1
           else
             echo "✅ CLOUDFLARE_ACCOUNT_ID is set (length: ${#ACCOUNT})"
@@ -108,7 +108,7 @@ jobs:
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy frontend/dist --project-name=${{ vars.CLOUDFLARE_PAGES_PROJECT || 'linklang' }} --branch=main
 
   preview-frontend:
@@ -140,7 +140,7 @@ jobs:
       - name: Debug Cloudflare secrets presence
         env:
           TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           if [ -z "$TOKEN" ]; then
             echo "::error::CLOUDFLARE_API_TOKEN is EMPTY — secret not available to this job (check repo Secrets, not Variables/Environment)"
@@ -149,7 +149,7 @@ jobs:
             echo "✅ CLOUDFLARE_API_TOKEN is set (length: ${#TOKEN})"
           fi
           if [ -z "$ACCOUNT" ]; then
-            echo "::error::CLOUDFLARE_ACCOUNT_ID is EMPTY"
+            echo "::error::CLOUDFLARE_ACCOUNT_ID is EMPTY — set it as a repository secret or variable"
             exit 1
           else
             echo "✅ CLOUDFLARE_ACCOUNT_ID is set (length: ${#ACCOUNT})"
@@ -160,5 +160,5 @@ jobs:
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy frontend/dist --project-name=${{ vars.CLOUDFLARE_PAGES_PROJECT || 'linklang' }} --branch=pr-${{ github.event.pull_request.number }}
