@@ -33,7 +33,20 @@ async function send(apiKey: string, subject: string, to: string, html: string, r
     }
 
     const resend = new Resend(apiKey);
-    await resend.emails.send({ from: FROM, to, subject, html, ...(replyTo ? { replyTo } : {}) });
+    const { data, error } = await resend.emails.send({
+      from: FROM,
+      to,
+      subject,
+      html,
+      ...(replyTo ? { replyTo } : {}),
+    });
+
+    if (error) {
+      console.error(`Failed to send email to ${to} [${subject}]:`, error);
+      return;
+    }
+
+    console.log(`Email sent to ${to} [${subject}], id=${data?.id ?? "unknown"}`);
   } catch (err) {
     console.error("Failed to send email:", err);
   }
