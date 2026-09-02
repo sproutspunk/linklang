@@ -22,7 +22,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
@@ -31,24 +31,23 @@ jobs:
       - name: Typecheck backend
         run: npm run typecheck -w backend
 
-      - name: Apply D1 migrations (remote)
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
-          command: d1 migrations apply linklang-db --remote --env production
+      - name: Apply D1 migrations
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          npx wrangler d1 migrations apply linklang-db --remote --env production
 
       - name: Deploy Worker
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
-          # --var injects the deployed commit SHA/build time so GET /api/_diag/version
-          # can prove which commit is actually live on api.linklang.co.uk.
-          command: >-
-            deploy --env production
-            --var GIT_COMMIT_SHA:${{ github.sha }}
-            --var BUILD_TIME:${{ github.event.head_commit.timestamp || github.run_started_at }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          npx wrangler deploy --env production \
+            --var BUILD_COMMIT:"${{ github.sha }}" \
+            --var BUILD_TIMESTAMP:"$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
   deploy-frontend:
     name: Deploy frontend (Cloudflare Pages)
@@ -61,7 +60,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
@@ -94,7 +93,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - name: Install dependencies

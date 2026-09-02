@@ -16,11 +16,12 @@ type Bindings = {
   RESEND_API_KEY: string;
   CORS_ORIGIN: string;
   CONTACT_INBOX_EMAIL?: string;
-  // Injected at deploy time via `wrangler deploy --var GIT_COMMIT_SHA:... --var BUILD_TIME:...`
+  // Injected at deploy time via `wrangler deploy --var BUILD_COMMIT:... --var BUILD_TIMESTAMP:...`
   // (see .github/workflows/deploy.yml). Used only by GET /api/_diag/version to prove which
   // commit is actually running on api.linklang.co.uk.
-  GIT_COMMIT_SHA?: string;
-  BUILD_TIME?: string;
+  BUILD_COMMIT?: string;
+  BUILD_TIMESTAMP?: string;
+  DIAG_SECRET?: string;
 };
 
 type UserPayload = { userId: number; role: "CLIENT" | "ADMIN"; email: string };
@@ -145,9 +146,55 @@ async function authRateLimit(c: any, next: any) {
 // (PR #9) — if this endpoint is reachable at all, that fix is present in this build.
 app.get("/api/_diag/version", (c) => {
   return c.json({
-    commit: c.env.GIT_COMMIT_SHA || "unknown",
+    commit: c.env.BUILD_COMMIT || "unknown",
     hasForgotPasswordFix: true,
-    timestamp: c.env.BUILD_TIME || "unknown",
+    timestamp: c.env.BUILD_TIMESTAMP || "unknown",
+  });
+});
+
+function maskEmailPreview(email: string) {
+  const [localPart, domain] = email.split("@");
+  if (!localPart || !domain) return null;
+  return `${localPart[0]}***@${domain}`;
+}
+
+// TEMPORARY: remove after debug (see PR #11).
+app.post("/api/_diag/check-user", async (c) => {
+  if (!c.env.DIAG_SECRET) {
+    return c.json({ error: "DIAG_SECRET is not configured" }, 503);
+  }
+  if (c.req.header("x-diag-secret") !== c.env.DIAG_SECRET) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+  if (!c.env.DB) {
+    return c.json({ error: "DB binding is not configured" }, 503);
+  }
+
+  const schema = z.object({ email: z.string().trim().email() });
+  const parsed = schema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ error: "Invalid input" }, 400);
+
+  const inputEmail = parsed.data.email;
+  const inputLowercased = inputEmail.toLowerCase();
+  const db = createDb(c.env.DB);
+  const exactUser = await db
+    .select({ email: users.email })
+    .from(users)
+    .where(eq(users.email, inputEmail))
+    .get();
+  const caseInsensitiveUser = await db
+    .select({ email: users.email })
+    .from(users)
+    .where(sql`lower(${users.email}) = ${inputLowercased}`)
+    .get();
+  const total = await db.select({ count: sql<number>`count(*)` }).from(users).get();
+
+  return c.json({
+    inputLowercased,
+    foundExact: !!exactUser,
+    foundCaseInsensitive: !!caseInsensitiveUser,
+    storedEmailPreview: caseInsensitiveUser ? maskEmailPreview(caseInsensitiveUser.email) : null,
+    totalUsers: Number(total?.count || 0),
   });
 });
 
@@ -467,15 +514,20 @@ app.post("/api/forgot-password", authRateLimit, async (c) => {
     origin: c.req.header("origin"),
   });
 
-  const db = createDb(c.env.DB);
   const schema = z.object({ email: z.string().trim().toLowerCase().email() });
   const parsed = schema.safeParse(rawBody);
-  if (!parsed.success) return c.json({ error: "Invalid input" }, 400);
+  if (!parsed.success) {
+    console.log("[forgot-password] exit: invalid input", { errors: parsed.error.flatten() });
+    return c.json({ error: "Invalid input" }, 400);
+  }
 
   // For dev/local testing without DB, return success anyway
   if (!c.env.DB) {
+    console.log("[forgot-password] exit: no DB binding");
     return c.json({ success: true }, 202);
   }
+
+  const db = createDb(c.env.DB);
 
   // Case-insensitive lookup: emails are normalized on registration only since a later commit,
   // so older rows can still be stored in mixed case and would never match an exact comparison.
@@ -485,7 +537,7 @@ app.post("/api/forgot-password", authRateLimit, async (c) => {
     .where(sql`lower(${users.email}) = ${parsed.data.email}`)
     .get();
   if (!user) {
-    console.warn("Password reset requested for unknown email");
+    console.log("[forgot-password] exit: user not found (silent success)");
     return c.json({ success: true }, 202); // Don't leak if email exists
   }
 
@@ -504,12 +556,15 @@ app.post("/api/forgot-password", authRateLimit, async (c) => {
     ? requestedOrigin
     : "https://linklang.co.uk";
   const resetLink = `${frontendOrigin}/forgot-password?token=${resetToken}`;
+  console.log("[forgot-password] found user, calling send", { userId: user.id });
   const sent = await sendPasswordResetEmail(c.env.RESEND_API_KEY, user.email, user.name || "Kliencie", resetLink);
+  console.log("[forgot-password] send result", { sent });
   if (!sent) {
-    console.error("Failed to send password reset email");
+    console.log("[forgot-password] exit: send failed");
     return c.json({ error: "Nie udało się wysłać wiadomości. Spróbuj ponownie później." }, 503);
   }
 
+  console.log("[forgot-password] exit: success");
   return c.json({ success: true }, 202);
 });
 
