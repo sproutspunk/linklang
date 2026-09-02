@@ -8,7 +8,7 @@ import { z } from "zod";
 import { createDb } from "./db.js";
 import { users, orders, quotes, messages, statusLogs } from "./schema.js";
 import { checkRateLimit } from "./rate-limit.js";
-import { sendWelcomeEmail, sendOrderConfirmationEmail, sendQuoteSentEmail, sendStatusChangeEmail, sendPasswordResetEmail, sendContactEmail, sendContactConfirmationEmail } from "./email.js";
+import { sendWelcomeEmail, sendNewUserNotificationEmail, sendOrderConfirmationEmail, sendQuoteSentEmail, sendStatusChangeEmail, sendPasswordResetEmail, sendContactEmail, sendContactConfirmationEmail } from "./email.js";
 
 type Bindings = {
   DB: D1Database;
@@ -158,7 +158,15 @@ app.post("/api/register", authRateLimit, async (c) => {
     .returning()
     .get();
 
-  c.executionCtx.waitUntil(sendWelcomeEmail(c.env.RESEND_API_KEY, user.email, user.name || "Kliencie"));
+  const adminInbox = c.env.CONTACT_INBOX_EMAIL || "hello@linklang.co.uk";
+  c.executionCtx.waitUntil(
+    Promise.all([
+      sendWelcomeEmail(c.env.RESEND_API_KEY, user.email, user.name || "Kliencie"),
+      sendNewUserNotificationEmail(c.env.RESEND_API_KEY, adminInbox, user.name || "Nie podano", user.email),
+    ]).then((results) => {
+      if (results.includes(false)) console.error("Failed to send a registration notification email");
+    })
+  );
 
   return c.json({ id: user.id, email: user.email, name: user.name, role: user.role }, 201);
 });
@@ -459,9 +467,8 @@ app.post("/api/forgot-password", authRateLimit, async (c) => {
     ? requestedOrigin
     : "https://linklang.co.uk";
   const resetLink = `${frontendOrigin}/forgot-password?token=${resetToken}`;
-  c.executionCtx.waitUntil(
-    sendPasswordResetEmail(c.env.RESEND_API_KEY, user.email, user.name || "Kliencie", resetLink)
-  );
+  const sent = await sendPasswordResetEmail(c.env.RESEND_API_KEY, user.email, user.name || "Kliencie", resetLink);
+  if (!sent) return c.json({ error: "Nie udało się wysłać wiadomości. Spróbuj ponownie później." }, 503);
 
   return c.json({ success: true }, 202);
 });

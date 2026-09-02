@@ -24,18 +24,18 @@ function escapeHtml(value: string) {
   })[character] || character);
 }
 
-// Email failures must never break the request that triggered them
-async function send(apiKey: string, subject: string, to: string, html: string, replyTo?: string) {
+async function send(apiKey: string, subject: string, to: string, html: string, replyTo?: string): Promise<boolean> {
   try {
     const resend = new Resend(apiKey);
     const { error } = await resend.emails.send({ from: FROM, to, subject, html, ...(replyTo ? { replyTo } : {}) });
-    // The Resend SDK does not throw on API-level failures (e.g. invalid/missing
-    // API key, unverified sending domain) - it resolves with an `error` field instead.
     if (error) {
       console.error("Failed to send email:", error);
+      return false;
     }
+    return true;
   } catch (err) {
     console.error("Failed to send email:", err);
+    return false;
   }
 }
 
@@ -46,6 +46,15 @@ export function sendWelcomeEmail(apiKey: string, to: string, name: string) {
     "Witaj w LinkLang",
     to,
     `<p>Cześć ${safeName},</p><p>Twoje konto w LinkLang zostało utworzone. Możesz teraz złożyć zlecenie tłumaczenia w swoim panelu klienta.</p>`
+  );
+}
+
+export function sendNewUserNotificationEmail(apiKey: string, to: string, name: string, email: string) {
+  return send(
+    apiKey,
+    "Nowy użytkownik LinkLang",
+    to,
+    `<p>Utworzono nowe konto w LinkLang.</p><p><strong>Imię i nazwisko:</strong> ${escapeHtml(name)}</p><p><strong>Email:</strong> ${escapeHtml(email)}</p>`
   );
 }
 
