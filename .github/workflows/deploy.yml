@@ -31,6 +31,24 @@ jobs:
       - name: Typecheck backend
         run: npm run typecheck -w backend
 
+      - name: Debug Cloudflare secrets presence
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::CLOUDFLARE_API_TOKEN is EMPTY — secret not available to this job"
+            exit 1
+          else
+            echo "✅ CLOUDFLARE_API_TOKEN is set (length: ${#TOKEN})"
+          fi
+          if [ -z "$ACCOUNT" ]; then
+            echo "::error::CLOUDFLARE_ACCOUNT_ID is EMPTY"
+            exit 1
+          else
+            echo "✅ CLOUDFLARE_ACCOUNT_ID is set (length: ${#ACCOUNT})"
+          fi
+
       - name: Apply D1 migrations (remote)
         uses: cloudflare/wrangler-action@v3
         with:
@@ -68,6 +86,24 @@ jobs:
           VITE_API_URL: ${{ vars.VITE_API_URL }}
         run: npm run build
 
+      - name: Debug Cloudflare secrets presence
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::CLOUDFLARE_API_TOKEN is EMPTY — secret not available to this job"
+            exit 1
+          else
+            echo "✅ CLOUDFLARE_API_TOKEN is set (length: ${#TOKEN})"
+          fi
+          if [ -z "$ACCOUNT" ]; then
+            echo "::error::CLOUDFLARE_ACCOUNT_ID is EMPTY"
+            exit 1
+          else
+            echo "✅ CLOUDFLARE_ACCOUNT_ID is set (length: ${#ACCOUNT})"
+          fi
+
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
@@ -100,6 +136,24 @@ jobs:
         env:
           VITE_API_URL: ${{ vars.VITE_API_URL_PREVIEW || vars.VITE_API_URL }}
         run: npm run build
+
+      - name: Debug Cloudflare secrets presence
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::CLOUDFLARE_API_TOKEN is EMPTY — secret not available to this job (check repo Secrets, not Variables/Environment)"
+            exit 1
+          else
+            echo "✅ CLOUDFLARE_API_TOKEN is set (length: ${#TOKEN})"
+          fi
+          if [ -z "$ACCOUNT" ]; then
+            echo "::error::CLOUDFLARE_ACCOUNT_ID is EMPTY"
+            exit 1
+          else
+            echo "✅ CLOUDFLARE_ACCOUNT_ID is set (length: ${#ACCOUNT})"
+          fi
 
       - name: Deploy Pages preview
         id: deploy
