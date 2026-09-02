@@ -8,7 +8,7 @@ import { z } from "zod";
 import { createDb } from "./db.js";
 import { users, orders, quotes, messages, statusLogs } from "./schema.js";
 import { checkRateLimit } from "./rate-limit.js";
-import { sendWelcomeEmail, sendOrderConfirmationEmail, sendQuoteSentEmail, sendStatusChangeEmail, sendContactEmail, sendContactConfirmationEmail } from "./email.js";
+import { sendWelcomeEmail, sendOrderConfirmationEmail, sendQuoteSentEmail, sendStatusChangeEmail, sendPasswordResetEmail, sendContactEmail, sendContactConfirmationEmail } from "./email.js";
 
 type Bindings = {
   DB: D1Database;
@@ -139,7 +139,7 @@ app.post("/api/register", authRateLimit, async (c) => {
   const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
   const schema = z.object({
     name: z.string().min(1),
-    email: z.string().email(),
+    email: z.string().trim().toLowerCase().email(),
     password: z.string().regex(passwordRegex, "Password must be at least 8 characters with uppercase, lowercase, digit, and special character"),
     captchaToken: z.string().optional(),
   });
@@ -164,7 +164,7 @@ app.post("/api/register", authRateLimit, async (c) => {
 app.post("/api/login", authRateLimit, async (c) => {
   const db = createDb(c.env.DB);
   const schema = z.object({
-    email: z.string().email(),
+    email: z.string().trim().toLowerCase().email(),
     password: z.string().min(1),
   });
   const parsed = schema.safeParse(await c.req.json());
@@ -430,7 +430,7 @@ app.get("/api/admin/summary", authMiddleware, adminMiddleware, async (c) => {
 // Password reset endpoints
 app.post("/api/forgot-password", authRateLimit, async (c) => {
   const db = createDb(c.env.DB);
-  const schema = z.object({ email: z.string().email() });
+  const schema = z.object({ email: z.string().trim().toLowerCase().email() });
   const parsed = schema.safeParse(await c.req.json());
   if (!parsed.success) return c.json({ error: "Invalid input" }, 400);
 
@@ -451,10 +451,7 @@ app.post("/api/forgot-password", authRateLimit, async (c) => {
   const frontendOrigin = c.req.header("origin") || "https://linklang.co.uk";
   const resetLink = `${frontendOrigin}/forgot-password?token=${resetToken}`;
   c.executionCtx.waitUntil(
-    (async () => {
-      const { sendPasswordResetEmail } = await import("./email.js");
-      sendPasswordResetEmail(c.env.RESEND_API_KEY, user.email, user.name || "Kliencie", resetLink);
-    })()
+    sendPasswordResetEmail(c.env.RESEND_API_KEY, user.email, user.name || "Kliencie", resetLink)
   );
 
   return c.json({ success: true }, 202);

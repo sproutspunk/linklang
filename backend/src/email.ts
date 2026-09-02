@@ -28,7 +28,12 @@ function escapeHtml(value: string) {
 async function send(apiKey: string, subject: string, to: string, html: string, replyTo?: string) {
   try {
     const resend = new Resend(apiKey);
-    await resend.emails.send({ from: FROM, to, subject, html, ...(replyTo ? { replyTo } : {}) });
+    const { error } = await resend.emails.send({ from: FROM, to, subject, html, ...(replyTo ? { replyTo } : {}) });
+    // The Resend SDK does not throw on API-level failures (e.g. invalid/missing
+    // API key, unverified sending domain) - it resolves with an `error` field instead.
+    if (error) {
+      console.error("Failed to send email:", error);
+    }
   } catch (err) {
     console.error("Failed to send email:", err);
   }
