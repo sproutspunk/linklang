@@ -139,7 +139,7 @@ app.post("/api/register", authRateLimit, async (c) => {
   const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
   const schema = z.object({
     name: z.string().min(1),
-    email: z.string().email(),
+    email: z.string().trim().toLowerCase().email(),
     password: z.string().regex(passwordRegex, "Password must be at least 8 characters with uppercase, lowercase, digit, and special character"),
     captchaToken: z.string().optional(),
   });
@@ -164,7 +164,7 @@ app.post("/api/register", authRateLimit, async (c) => {
 app.post("/api/login", authRateLimit, async (c) => {
   const db = createDb(c.env.DB);
   const schema = z.object({
-    email: z.string().email(),
+    email: z.string().trim().toLowerCase().email(),
     password: z.string().min(1),
   });
   const parsed = schema.safeParse(await c.req.json());
@@ -430,7 +430,7 @@ app.get("/api/admin/summary", authMiddleware, adminMiddleware, async (c) => {
 // Password reset endpoints
 app.post("/api/forgot-password", authRateLimit, async (c) => {
   const db = createDb(c.env.DB);
-  const schema = z.object({ email: z.string().email() });
+  const schema = z.object({ email: z.string().trim().toLowerCase().email() });
   const parsed = schema.safeParse(await c.req.json());
   if (!parsed.success) return c.json({ error: "Invalid input" }, 400);
 
