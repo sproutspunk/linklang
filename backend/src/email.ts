@@ -113,3 +113,25 @@ export function sendContactConfirmationEmail(apiKey: string, to: string, name: s
     `<p>Cześć ${escapeHtml(name)},</p><p>Dziękujemy za wiadomość. Odpowiemy na nią tak szybko, jak to możliwe.</p><p>If you want, you can also write to meereck@gmail.com.</p><p>Jeśli chcesz, możesz też od razu napisać na meereck@gmail.com.</p>`
   );
 }
+
+export function sendAdminNewUserEmail(apiKey: string, to: string, userEmail: string, userName: string) {
+  const safeUserName = escapeHtml(userName);
+  const safeUserEmail = escapeHtml(userEmail);
+  return send(
+    apiKey,
+    "Nowy użytkownik zarejestrował się w LinkLang",
+    to,
+    `<p>Nowy użytkownik zarejestrował się na platformie LinkLang.</p><p><strong>Imię i nazwisko:</strong> ${safeUserName}</p><p><strong>Email:</strong> ${safeUserEmail}</p>`
+  );
+}
+
+export function sendAdminPasswordResetEmail(apiKey: string, to: string, userEmail: string, userName: string) {
+  const safeUserName = escapeHtml(userName);
+  const safeUserEmail = escapeHtml(userEmail);
+  return send(
+    apiKey,
+    "Prośba o reset hasła w LinkLang",
+    to,
+    `<p>Użytkownik poprosił o reset hasła w LinkLang.</p><p><strong>Imię i nazwisko:</strong> ${safeUserName}</p><p><strong>Email:</strong> ${safeUserEmail}</p>`
+  );
+}

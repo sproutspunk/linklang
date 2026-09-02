@@ -8,7 +8,7 @@ import { z } from "zod";
 import { createDb } from "./db.js";
 import { users, orders, quotes, messages, statusLogs } from "./schema.js";
 import { checkRateLimit } from "./rate-limit.js";
-import { sendWelcomeEmail, sendOrderConfirmationEmail, sendQuoteSentEmail, sendStatusChangeEmail, sendContactEmail, sendContactConfirmationEmail } from "./email.js";
+import { sendWelcomeEmail, sendOrderConfirmationEmail, sendQuoteSentEmail, sendStatusChangeEmail, sendContactEmail, sendContactConfirmationEmail, sendPasswordResetEmail, sendAdminNewUserEmail, sendAdminPasswordResetEmail } from "./email.js";
 
 type Bindings = {
   DB: D1Database;
@@ -184,7 +184,12 @@ app.post("/api/register", authRateLimit, async (c) => {
     .returning()
     .get();
 
-  c.executionCtx.waitUntil(sendWelcomeEmail(c.env.RESEND_API_KEY, user.email, user.name || "Kliencie"));
+  c.executionCtx.waitUntil(
+    Promise.all([
+      sendWelcomeEmail(c.env.RESEND_API_KEY, user.email, user.name || "Kliencie"),
+      sendAdminNewUserEmail(c.env.RESEND_API_KEY, c.env.CONTACT_INBOX_EMAIL || "hello@linklang.co.uk", user.email, user.name || "Użytkownik"),
+    ])
+  );
 
   return c.json({ id: user.id, email: user.email, name: user.name, role: user.role }, 201);
 });
@@ -504,10 +509,10 @@ app.post("/api/forgot-password", authRateLimit, async (c) => {
   const frontendOrigin = getFrontendOrigin(c);
   const resetLink = `${frontendOrigin}/forgot-password?token=${resetToken}`;
   c.executionCtx.waitUntil(
-    (async () => {
-      const { sendPasswordResetEmail } = await import("./email.js");
-      return sendPasswordResetEmail(c.env.RESEND_API_KEY, user.email, user.name || "Kliencie", resetLink);
-    })()
+    Promise.all([
+      sendPasswordResetEmail(c.env.RESEND_API_KEY, user.email, user.name || "Kliencie", resetLink),
+      sendAdminPasswordResetEmail(c.env.RESEND_API_KEY, c.env.CONTACT_INBOX_EMAIL || "hello@linklang.co.uk", user.email, user.name || "Użytkownik"),
+    ])
   );
 
   return c.json({ success: true }, 202);
