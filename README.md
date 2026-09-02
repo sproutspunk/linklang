@@ -221,7 +221,8 @@ Triggered via Resend API:
 ```bash
 cd frontend
 npm run build
-npx wrangler pages deploy dist
+npm run deploy
+# or: npx wrangler pages deploy dist --project-name=linklang
 ```
 
 ### Backend (Cloudflare Workers)
