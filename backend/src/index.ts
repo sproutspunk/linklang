@@ -8,7 +8,7 @@ import { z } from "zod";
 import { createDb } from "./db.js";
 import { users, orders, quotes, messages, statusLogs } from "./schema.js";
 import { checkRateLimit } from "./rate-limit.js";
-import { sendWelcomeEmail, sendOrderConfirmationEmail, sendQuoteSentEmail, sendStatusChangeEmail, sendPasswordResetEmail, sendContactEmail, sendContactConfirmationEmail } from "./email.js";
+import { sendWelcomeEmail, sendNewUserAdminEmail, sendOrderConfirmationEmail, sendQuoteSentEmail, sendStatusChangeEmail, sendPasswordResetEmail, sendContactEmail, sendContactConfirmationEmail } from "./email.js";
 
 type Bindings = {
   DB: D1Database;
@@ -158,7 +158,13 @@ app.post("/api/register", authRateLimit, async (c) => {
     .returning()
     .get();
 
-  c.executionCtx.waitUntil(sendWelcomeEmail(c.env.RESEND_API_KEY, user.email, user.name || "Kliencie"));
+  const registrationInbox = c.env.CONTACT_INBOX_EMAIL || "hello@linklang.co.uk";
+  c.executionCtx.waitUntil(
+    Promise.all([
+      sendWelcomeEmail(c.env.RESEND_API_KEY, user.email, user.name || "Kliencie"),
+      sendNewUserAdminEmail(c.env.RESEND_API_KEY, registrationInbox, user.name || "Nie podano", user.email),
+    ])
+  );
 
   return c.json({ id: user.id, email: user.email, name: user.name, role: user.role }, 201);
 });

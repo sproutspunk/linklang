@@ -49,6 +49,17 @@ export function sendWelcomeEmail(apiKey: string, to: string, name: string) {
   );
 }
 
+export function sendNewUserAdminEmail(apiKey: string, to: string, name: string, email: string) {
+  const safeName = escapeHtml(name);
+  const safeEmail = escapeHtml(email);
+  return send(
+    apiKey,
+    "LinkLang - nowy użytkownik",
+    to,
+    `<p>Zarejestrował się nowy użytkownik w LinkLang.</p><p><strong>Imię i nazwisko:</strong> ${safeName}</p><p><strong>Email:</strong> ${safeEmail}</p>`
+  );
+}
+
 export function sendOrderConfirmationEmail(apiKey: string, to: string, name: string, orderId: number) {
   const safeName = escapeHtml(name);
   return send(
