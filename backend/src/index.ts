@@ -449,8 +449,17 @@ app.post("/api/forgot-password", authRateLimit, async (c) => {
     return c.json({ success: true }, 202);
   }
 
-  const user = await db.select().from(users).where(eq(users.email, parsed.data.email)).get();
-  if (!user) return c.json({ success: true }, 202); // Don't leak if email exists
+  // Case-insensitive lookup: emails are normalized on registration only since a later commit,
+  // so older rows can still be stored in mixed case and would never match an exact comparison.
+  const user = await db
+    .select()
+    .from(users)
+    .where(sql`lower(${users.email}) = ${parsed.data.email}`)
+    .get();
+  if (!user) {
+    console.warn("Password reset requested for unknown email");
+    return c.json({ success: true }, 202); // Don't leak if email exists
+  }
 
   const resetToken = await new SignJWT({ email: user.email, purpose: "password_reset" })
     .setProtectedHeader({ alg: "HS256" })
@@ -468,7 +477,10 @@ app.post("/api/forgot-password", authRateLimit, async (c) => {
     : "https://linklang.co.uk";
   const resetLink = `${frontendOrigin}/forgot-password?token=${resetToken}`;
   const sent = await sendPasswordResetEmail(c.env.RESEND_API_KEY, user.email, user.name || "Kliencie", resetLink);
-  if (!sent) return c.json({ error: "Nie udało się wysłać wiadomości. Spróbuj ponownie później." }, 503);
+  if (!sent) {
+    console.error("Failed to send password reset email");
+    return c.json({ error: "Nie udało się wysłać wiadomości. Spróbuj ponownie później." }, 503);
+  }
 
   return c.json({ success: true }, 202);
 });
