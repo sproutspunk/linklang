@@ -8,7 +8,7 @@ import { z } from "zod";
 import { createDb } from "./db.js";
 import { users, orders, quotes, messages, statusLogs } from "./schema.js";
 import { checkRateLimit } from "./rate-limit.js";
-import { sendWelcomeEmail, sendOrderConfirmationEmail, sendQuoteSentEmail, sendStatusChangeEmail, sendContactEmail, sendContactConfirmationEmail } from "./email.js";
+import { sendWelcomeEmail, sendOrderConfirmationEmail, sendQuoteSentEmail, sendStatusChangeEmail, sendPasswordResetEmail, sendContactEmail, sendContactConfirmationEmail } from "./email.js";
 
 type Bindings = {
   DB: D1Database;
@@ -451,10 +451,7 @@ app.post("/api/forgot-password", authRateLimit, async (c) => {
   const frontendOrigin = c.req.header("origin") || "https://linklang.co.uk";
   const resetLink = `${frontendOrigin}/forgot-password?token=${resetToken}`;
   c.executionCtx.waitUntil(
-    (async () => {
-      const { sendPasswordResetEmail } = await import("./email.js");
-      sendPasswordResetEmail(c.env.RESEND_API_KEY, user.email, user.name || "Kliencie", resetLink);
-    })()
+    sendPasswordResetEmail(c.env.RESEND_API_KEY, user.email, user.name || "Kliencie", resetLink)
   );
 
   return c.json({ success: true }, 202);
