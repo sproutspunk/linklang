@@ -15,7 +15,14 @@ interface AuthState {
 }
 
 export const useAuth = create<AuthState>((set) => ({
-  user: JSON.parse(localStorage.getItem("linklang_user") || "null"),
+  user: (() => {
+    try {
+      return JSON.parse(localStorage.getItem("linklang_user") || "null");
+    } catch {
+      localStorage.removeItem("linklang_user");
+      return null;
+    }
+  })(),
   token: localStorage.getItem("linklang_token") || null,
   setAuth: (user, token) => {
     localStorage.setItem("linklang_user", JSON.stringify(user));

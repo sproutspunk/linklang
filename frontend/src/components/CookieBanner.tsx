@@ -58,7 +58,13 @@ export default function CookieBanner() {
       setIsVisible(true);
     } else {
       const saved = localStorage.getItem("linklang_cookie_preferences");
-      if (saved) setPreferences(JSON.parse(saved));
+      if (saved) {
+        try {
+          setPreferences(JSON.parse(saved));
+        } catch {
+          localStorage.removeItem("linklang_cookie_preferences");
+        }
+      }
     }
   }, []);
 
