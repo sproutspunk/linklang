@@ -21,3 +21,28 @@ backend/drizzle/seed.sql
 # logs
 npm-debug.log*
 *.log
+
+# IDE / editor configs
+.continue/
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# images / screenshots / notes / debug dumps
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.bmp
+*.tiff
+*.tmp
+*.bak
+*.old
+screenshots/
+prints/
+notes/
+debug/
