@@ -18,20 +18,16 @@ function getApiBase() {
   );
 }
 
-function getAuthHeaders(): Record<string, string> {
-  const token = useAuth.getState().token;
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
 export async function apiFetch(path: string, options: RequestInit = {}) {
   const apiBase = getApiBase();
+  const token = useAuth.getState().token;
   const isFormData = options.body instanceof FormData;
 
   const res = await fetch(`${apiBase}${path}`, {
     ...options,
     headers: {
       ...(isFormData ? {} : { "Content-Type": "application/json" }),
-      ...getAuthHeaders(),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
   });
@@ -49,9 +45,10 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
 
 export async function apiDownload(path: string, filename: string) {
   const apiBase = getApiBase();
+  const token = useAuth.getState().token;
 
   const res = await fetch(`${apiBase}${path}`, {
-    headers: getAuthHeaders(),
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   if (res.status === 401) {
     useAuth.getState().logout();
@@ -73,3 +70,4 @@ export async function apiDownload(path: string, filename: string) {
   document.body.removeChild(a);
   window.URL.revokeObjectURL(url);
 }
+

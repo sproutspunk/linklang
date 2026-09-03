@@ -24,31 +24,27 @@ function escapeHtml(value: string) {
   })[character] || character);
 }
 
-// Email failures must never break the request that triggered them
-async function send(apiKey: string, subject: string, to: string, html: string, replyTo?: string) {
+async function send(apiKey: string, subject: string, to: string, html: string, replyTo?: string): Promise<boolean> {
   try {
-    if (!apiKey) {
-      console.error("Failed to send email: RESEND_API_KEY is not configured");
-      return;
-    }
-
     const resend = new Resend(apiKey);
-    const { data, error } = await resend.emails.send({
-      from: FROM,
-      to,
-      subject,
-      html,
-      ...(replyTo ? { replyTo } : {}),
+    console.log("[email.send] calling resend", { to, subject, hasApiKey: !!apiKey });
+    const { error } = await resend.emails.send({ from: FROM, to, subject, html, ...(replyTo ? { replyTo } : {}) });
+    console.log("[email.send] result", {
+      success: !error,
+      errorName: error?.name,
+      errorMessage: error?.message,
+      statusCode: (error as { statusCode?: number } | null)?.statusCode,
     });
-
-    if (error) {
-      console.error(`Failed to send email to ${to} [${subject}]:`, error);
-      return;
-    }
-
-    console.log(`Email sent to ${to} [${subject}], id=${data?.id ?? "unknown"}`);
+    if (error) return false;
+    return true;
   } catch (err) {
-    console.error("Failed to send email:", err);
+    console.log("[email.send] result", {
+      success: false,
+      errorName: err instanceof Error ? err.name : undefined,
+      errorMessage: err instanceof Error ? err.message : String(err),
+      statusCode: (err as { statusCode?: number } | null)?.statusCode,
+    });
+    return false;
   }
 }
 
@@ -59,6 +55,15 @@ export function sendWelcomeEmail(apiKey: string, to: string, name: string) {
     "Witaj w LinkLang",
     to,
     `<p>Cześć ${safeName},</p><p>Twoje konto w LinkLang zostało utworzone. Możesz teraz złożyć zlecenie tłumaczenia w swoim panelu klienta.</p>`
+  );
+}
+
+export function sendNewUserNotificationEmail(apiKey: string, to: string, name: string, email: string) {
+  return send(
+    apiKey,
+    "Nowy użytkownik LinkLang",
+    to,
+    `<p>Utworzono nowe konto w LinkLang.</p><p><strong>Imię i nazwisko:</strong> ${escapeHtml(name)}</p><p><strong>Email:</strong> ${escapeHtml(email)}</p>`
   );
 }
 
@@ -84,13 +89,14 @@ export function sendQuoteSentEmail(apiKey: string, to: string, name: string, ord
 }
 
 export function sendStatusChangeEmail(apiKey: string, to: string, name: string, orderId: number, status: string) {
+  const label = STATUS_LABELS[status] || status;
   const safeName = escapeHtml(name);
-  const label = escapeHtml(STATUS_LABELS[status] || status);
+  const safeLabel = escapeHtml(label);
   return send(
     apiKey,
     `Status zlecenia #${String(orderId).padStart(4, "0")}: ${label}`,
     to,
-    `<p>Cześć ${safeName},</p><p>Status Twojego zlecenia #${String(orderId).padStart(4, "0")} zmienił się na: <strong>${label}</strong>.</p>`
+    `<p>Cześć ${safeName},</p><p>Status Twojego zlecenia #${String(orderId).padStart(4, "0")} zmienił się na: <strong>${safeLabel}</strong>.</p>`
   );
 }
 
@@ -111,7 +117,7 @@ export function sendContactEmail(apiKey: string, to: string, name: string, email
   const safeMessage = escapeHtml(message).replace(/\n/g, "<br>");
   return send(
     apiKey,
-    `Nowa wiadomość kontaktowa od ${safeName}`,
+    `Nowa wiadomość kontaktowa od ${name}`,
     to,
     `<p><strong>Imię i nazwisko:</strong> ${safeName}</p><p><strong>Email:</strong> ${safeEmail}</p><p><strong>Wiadomość:</strong></p><p>${safeMessage}</p>`,
     email
@@ -124,27 +130,5 @@ export function sendContactConfirmationEmail(apiKey: string, to: string, name: s
     "LinkLang - potwierdzenie wiadomości",
     to,
     `<p>Cześć ${escapeHtml(name)},</p><p>Dziękujemy za wiadomość. Odpowiemy na nią tak szybko, jak to możliwe.</p><p>If you want, you can also write to meereck@gmail.com.</p><p>Jeśli chcesz, możesz też od razu napisać na meereck@gmail.com.</p>`
-  );
-}
-
-export function sendAdminNewUserEmail(apiKey: string, to: string, userEmail: string, userName: string) {
-  const safeUserName = escapeHtml(userName);
-  const safeUserEmail = escapeHtml(userEmail);
-  return send(
-    apiKey,
-    "Nowy użytkownik zarejestrował się w LinkLang",
-    to,
-    `<p>Nowy użytkownik zarejestrował się na platformie LinkLang.</p><p><strong>Imię i nazwisko:</strong> ${safeUserName}</p><p><strong>Email:</strong> ${safeUserEmail}</p>`
-  );
-}
-
-export function sendAdminPasswordResetEmail(apiKey: string, to: string, userEmail: string, userName: string) {
-  const safeUserName = escapeHtml(userName);
-  const safeUserEmail = escapeHtml(userEmail);
-  return send(
-    apiKey,
-    "Prośba o reset hasła w LinkLang",
-    to,
-    `<p>Użytkownik poprosił o reset hasła w LinkLang.</p><p><strong>Imię i nazwisko:</strong> ${safeUserName}</p><p><strong>Email:</strong> ${safeUserEmail}</p>`
   );
 }

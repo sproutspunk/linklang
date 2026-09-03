@@ -24,8 +24,11 @@ export default function Admin() {
   const [summary, setSummary] = useState<any>(null);
 
   useEffect(() => {
-    apiFetch("/api/orders").then((data) => { setOrders(data); setFiltered(data); setLoading(false); });
-    apiFetch("/api/admin/summary").then(setSummary);
+    apiFetch("/api/orders")
+      .then((data) => { setOrders(data); setFiltered(data); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+    apiFetch("/api/admin/summary").then(setSummary).catch(() => {});
   }, []);
 
   useEffect(() => {

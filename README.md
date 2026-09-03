@@ -8,7 +8,7 @@ A modern, full-stack web application for managing translation and interpreting s
 
 ## 🎯 Project Overview
 
-LinkLang is a professional translation services platform that connects clients with qualified translators and interpreters. The platform streamlines service requests, quote generation, and real-time communication.
+LinkLang is a professional translation services platform that connects clients with qualified translators and interpreters. The platform streamlines service requests, quote generation, payment processing, and real-time communication.
 
 ### Key Features
 
@@ -16,18 +16,11 @@ LinkLang is a professional translation services platform that connects clients w
 - **Quote System**: Automated quote generation and client acceptance
 - **Secure Authentication**: JWT-based auth with strong password requirements (8+ chars, uppercase, lowercase, numbers, special chars)
 - **Real-time Communication**: Messaging system between clients and service providers
-- **Password Reset**: Email-based password reset flow
-- **Account Password Change**: Authenticated users can change passwords from their panels
+- **Payment Processing**: Online payment integration
 - **Admin Dashboard**: Comprehensive order and client management
 - **Multi-language Support**: Full PL/EN translations throughout the platform
 - **Cookie Management**: Transparent cookie preferences with GDPR compliance
 - **Responsive Design**: Mobile-first design with Tailwind CSS
-
-### Planned Features
-
-- **Document Uploads**: Secure client/admin document exchange
-- **Payment Processing**: Online payment integration
-- **Email Opt-out**: Preferences for non-transactional emails
 
 ---
 
@@ -57,7 +50,6 @@ LinkLang is a professional translation services platform that connects clients w
 - Cloudflare Workers (serverless backend)
 - Cloudflare Pages (frontend hosting)
 - Cloudflare D1 (SQLite database)
-- Honeypot fields + rate limiting (bot/spam prevention)
 
 ---
 
@@ -73,6 +65,7 @@ linklang-vite/
 │   │   ├── email.ts           # Email notification service
 │   │   └── rate-limit.ts      # Anti-brute-force protection
 │   ├── migrations/            # Database migrations
+│   ├── wrangler.toml          # Cloudflare Workers config
 │   └── package.json
 │
 ├── frontend/                   # React SPA with Vite
@@ -80,7 +73,7 @@ linklang-vite/
 │   │   ├── pages/             # Route pages
 │   │   │   ├── Home.tsx       # Landing page
 │   │   │   ├── Login.tsx      # Login page
-│   │   │   ├── Register.tsx   # Registration
+│   │   │   ├── Register.tsx       # Registration
 │   │   │   ├── ForgotPassword.tsx
 │   │   │   ├── Privacy.tsx    # Privacy policy
 │   │   │   ├── Terms.tsx      # Terms & conditions
@@ -109,6 +102,7 @@ linklang-vite/
 │   ├── tailwind.config.js
 │   └── package.json
 │
+├── migrations/                # Database migration files
 ├── wrangler.toml             # Root Cloudflare config
 ├── package.json              # Root workspace config
 └── README.md                 # This file
@@ -128,7 +122,7 @@ linklang-vite/
 1. **Clone & Install**
 ```bash
 git clone https://github.com/sproutspunk/linklang.git
-cd linklang
+cd linklang-vite
 npm install
 ```
 
@@ -197,8 +191,6 @@ CANCELLED
 - **Password Requirements**: 8+ characters, uppercase, lowercase, number, special character
 - **JWT Authentication**: 7-day token expiration
 - **Rate Limiting**: Anti-brute-force protection (20 requests/900s on auth endpoints)
-- **Honeypot Protection**: Hidden fields on public forms to reject simple bots without CAPTCHA
-- **Contact Rate Limiting**: Anti-spam protection on contact form submissions
 - **HTTPS**: All production traffic encrypted
 - **CORS Protection**: Configurable allowed origins
 - **Input Validation**: Zod schema validation on all endpoints
@@ -217,11 +209,15 @@ Triggered via Resend API:
 | Quote Sent | Client | Quote notification with amount |
 | Status Changed | Client | Order status update |
 | Contact Form | Admin + sender | New inquiry confirmation |
-| Password Reset | User | Password reset link |
 
 ---
 
 ## 🌐 Deployment
+
+Deploys to production happen automatically via `.github/workflows/deploy.yml`
+on every push to `main` (applies D1 migrations remotely, then deploys the
+Worker and Pages sites). Manual deploys remain available for local
+troubleshooting:
 
 ### Frontend (Cloudflare Pages)
 
@@ -234,8 +230,17 @@ npx wrangler pages deploy dist
 ### Backend (Cloudflare Workers)
 
 ```bash
-cd linklang
+# Run from the repository root — wrangler.toml only defines [env.production],
+# so --env production is required (there is no default environment anymore).
 npx wrangler deploy --env production
+```
+
+To confirm which commit is actually live on `api.linklang.co.uk` (proves the
+CI deploy ran and includes your latest change):
+
+```bash
+curl -s https://api.linklang.co.uk/api/_diag/version
+# {"commit":"<sha>","hasForgotPasswordFix":true,"timestamp":"<build time>"}
 ```
 
 ### Environment Setup (Production)
@@ -246,17 +251,25 @@ npx wrangler deploy --env production
 npx wrangler secret put JWT_SECRET --env production
 npx wrangler secret put RESEND_API_KEY --env production
 ```
-
-3. **Configure email delivery**:
-   - Verify `linklang.co.uk` as a sender domain in Resend.
-   - Ensure the DNS records required by Resend are active.
-   - The Worker sends from `LinkLang <hello@linklang.co.uk>`.
+3. **GitHub Actions** repo secrets/vars: `CLOUDFLARE_API_TOKEN`,
+   `CLOUDFLARE_ACCOUNT_ID` (secret or repo variable), optional
+   `VITE_API_URL`, `CLOUDFLARE_PAGES_PROJECT`.
 
 4. **Configure CORS**:
 Update `wrangler.toml`:
 ```toml
 [env.production]
 vars = { CORS_ORIGIN = "https://linklang.co.uk" }
+```
+
+5. **Apply D1 migrations on remote** (also done automatically by CI on every
+   push to `main`, but useful to run manually / verify):
+```bash
+npx wrangler d1 migrations apply linklang-db --remote --env production
+
+# Verify no legacy mixed-case emails remain (must return 0):
+npx wrangler d1 execute linklang-db --remote --env production \
+  --command "SELECT COUNT(*) AS mixed FROM users WHERE email != LOWER(email)"
 ```
 
 ---
@@ -304,9 +317,6 @@ vars = { CORS_ORIGIN = "https://linklang.co.uk" }
 - `POST /api/register` - User registration
 - `POST /api/login` - User login
 - `GET /api/me` - Get current user info
-- `POST /api/change-password` - Change password for the authenticated user
-- `POST /api/forgot-password` - Request password reset email
-- `POST /api/reset-password` - Set a new password with reset token
 
 ### Orders
 - `GET /api/orders` - List orders (role-based filtering)
@@ -347,7 +357,7 @@ The platform supports **Polish (PL)** and **English (EN)** with:
 - ✅ Cookie Preferences with granular controls
 - ✅ GDPR-compliant data handling
 - ✅ Secure password storage with bcryptjs
-- 🔜 Email opt-out support planned
+- ✅ Email opt-out support
 
 ---
 

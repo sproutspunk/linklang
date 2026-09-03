@@ -8,7 +8,7 @@ import { z } from "zod";
 import { createDb } from "./db.js";
 import { users, orders, quotes, messages, statusLogs, documents } from "./schema.js";
 import { checkRateLimit } from "./rate-limit.js";
-import { sendWelcomeEmail, sendOrderConfirmationEmail, sendQuoteSentEmail, sendStatusChangeEmail, sendContactEmail, sendContactConfirmationEmail, sendPasswordResetEmail, sendAdminNewUserEmail, sendAdminPasswordResetEmail } from "./email.js";
+import { sendWelcomeEmail, sendNewUserNotificationEmail, sendOrderConfirmationEmail, sendQuoteSentEmail, sendStatusChangeEmail, sendPasswordResetEmail, sendContactEmail, sendContactConfirmationEmail } from "./email.js";
 
 type Bindings = {
   DB: D1Database;
@@ -17,6 +17,12 @@ type Bindings = {
   CORS_ORIGIN: string;
   CONTACT_INBOX_EMAIL?: string;
   DOCUMENTS_BUCKET: R2Bucket;
+  // Injected at deploy time via `wrangler deploy --var BUILD_COMMIT:... --var BUILD_TIMESTAMP:...`
+  // (see .github/workflows/deploy.yml). Used only by GET /api/_diag/version to prove which
+  // commit is actually running on api.linklang.co.uk.
+  BUILD_COMMIT?: string;
+  BUILD_TIMESTAMP?: string;
+  DIAG_SECRET?: string;
 };
 
 type UserPayload = { userId: number; role: "CLIENT" | "ADMIN"; email: string };
@@ -43,48 +49,31 @@ const defaultAllowedOrigins = [
   "https://www.linklang.co.uk",
 ];
 
-function getAllowedOrigins(env: Bindings) {
-  const configured = (env.CORS_ORIGIN || "")
-    .split(",")
-    .map((origin) => origin.trim().toLowerCase())
-    .filter(Boolean);
-
-  return Array.from(new Set([...configured, ...defaultAllowedOrigins]));
-}
-
-function isAllowedOrigin(origin: string, allowedOrigins: string[]) {
-  const normalized = origin.toLowerCase();
-
-  if (allowedOrigins.includes(normalized)) return true;
-
-  if (normalized.endsWith(".linklang.pages.dev")) return true;
-
-  return allowedOrigins.some((allowed) =>
-    allowed.includes("*") && normalized.endsWith(allowed.replaceAll("*", ""))
-  );
-}
-
-function getFrontendOrigin(c: any) {
-  const allowedOrigins = getAllowedOrigins(c.env);
-  const origin = c.req.header("origin");
-
-  if (origin && isAllowedOrigin(origin, allowedOrigins)) {
-    return origin.toLowerCase();
-  }
-
-  return allowedOrigins.find((allowed) => allowed.startsWith("https://")) || "https://linklang.co.uk";
-}
-
 app.use("*", secureHeaders());
 app.use("*", async (c, next) => {
-  const allowedOrigins = getAllowedOrigins(c.env);
+  const configured = (c.env.CORS_ORIGIN || "")
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean);
+
+  const allowedOrigins = configured.length > 0
+    ? Array.from(new Set(configured.map((origin) => origin.toLowerCase())))
+    : defaultAllowedOrigins;
 
   return cors({
     origin: (origin) => {
-      if (!origin) return allowedOrigins[0];
+      if (!origin) return "http://localhost:5173";
       const normalized = origin.toLowerCase();
 
-      if (isAllowedOrigin(normalized, allowedOrigins)) return normalized;
+      if (allowedOrigins.includes(normalized)) return normalized;
+
+      const wildcardMatch = allowedOrigins.some((allowed) =>
+        allowed.includes("*") && normalized.endsWith(allowed.replace("*", ""))
+      );
+
+      if (wildcardMatch) return normalized;
+
+      if (normalized.endsWith(".linklang.pages.dev") && configured.length === 0) return normalized;
 
       return allowedOrigins[0];
     },
@@ -96,22 +85,14 @@ app.use("*", async (c, next) => {
 
 
 
-app.post("/api/contact", async (c) => {
+app.post("/api/contact", authRateLimit, async (c) => {
   const schema = z.object({
     name: z.string().trim().min(1).max(120),
     email: z.string().trim().email(),
     message: z.string().trim().min(1).max(5000),
-    website: z.string().optional(),
   });
   const parsed = schema.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json({ error: "Invalid input" }, 400);
-  if (parsed.data.website) return c.json({ success: true }, 202);
-
-  if (c.env.DB) {
-    const ip = c.req.header("cf-connecting-ip") || "unknown";
-    const ok = await checkRateLimit(c.env.DB, `contact:${ip}`, 5, 900);
-    if (!ok) return c.json({ error: "Too many requests" }, 429);
-  }
 
   const contactInbox = c.env.CONTACT_INBOX_EMAIL || "hello@linklang.co.uk";
 
@@ -156,10 +137,67 @@ async function authRateLimit(c: any, next: any) {
     return;
   }
   const ip = c.req.header("cf-connecting-ip") || "unknown";
-  const ok = await checkRateLimit(c.env.DB, `auth:${ip}`, 20, 900);
+  const ok = await checkRateLimit(c.env.DB, `rate:${c.req.path}:${ip}`, 20, 900);
   if (!ok) return c.json({ error: "Too many requests" }, 429);
   await next();
 }
+
+// Diagnostic endpoint: proves which commit is actually deployed behind api.linklang.co.uk.
+// `hasForgotPasswordFix` is a hardcoded marker for the case-insensitive email lookup fix
+// (PR #9) — if this endpoint is reachable at all, that fix is present in this build.
+app.get("/api/_diag/version", (c) => {
+  return c.json({
+    commit: c.env.BUILD_COMMIT || "unknown",
+    hasForgotPasswordFix: true,
+    timestamp: c.env.BUILD_TIMESTAMP || "unknown",
+  });
+});
+
+function maskEmailPreview(email: string) {
+  const [localPart, domain] = email.split("@");
+  if (!localPart || !domain) return null;
+  return `${localPart[0]}***@${domain}`;
+}
+
+// TEMPORARY: remove after debug (see PR #11).
+app.post("/api/_diag/check-user", async (c) => {
+  if (!c.env.DIAG_SECRET) {
+    return c.json({ error: "DIAG_SECRET is not configured" }, 503);
+  }
+  if (c.req.header("x-diag-secret") !== c.env.DIAG_SECRET) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+  if (!c.env.DB) {
+    return c.json({ error: "DB binding is not configured" }, 503);
+  }
+
+  const schema = z.object({ email: z.string().trim().email() });
+  const parsed = schema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ error: "Invalid input" }, 400);
+
+  const inputEmail = parsed.data.email;
+  const inputLowercased = inputEmail.toLowerCase();
+  const db = createDb(c.env.DB);
+  const exactUser = await db
+    .select({ email: users.email })
+    .from(users)
+    .where(eq(users.email, inputEmail))
+    .get();
+  const caseInsensitiveUser = await db
+    .select({ email: users.email })
+    .from(users)
+    .where(sql`lower(${users.email}) = ${inputLowercased}`)
+    .get();
+  const total = await db.select({ count: sql<number>`count(*)` }).from(users).get();
+
+  return c.json({
+    inputLowercased,
+    foundExact: !!exactUser,
+    foundCaseInsensitive: !!caseInsensitiveUser,
+    storedEmailPreview: caseInsensitiveUser ? maskEmailPreview(caseInsensitiveUser.email) : null,
+    totalUsers: Number(total?.count || 0),
+  });
+});
 
 // Auth routes
 app.post("/api/register", authRateLimit, async (c) => {
@@ -167,13 +205,12 @@ app.post("/api/register", authRateLimit, async (c) => {
   const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
   const schema = z.object({
     name: z.string().min(1),
-    email: z.string().email(),
+    email: z.string().trim().toLowerCase().email(),
     password: z.string().regex(passwordRegex, "Password must be at least 8 characters with uppercase, lowercase, digit, and special character"),
-    website: z.string().optional(),
+    captchaToken: z.string().optional(),
   });
   const parsed = schema.safeParse(await c.req.json());
   if (!parsed.success) return c.json({ error: parsed.error.flatten().fieldErrors.password?.[0] || "Invalid input" }, 400);
-  if (parsed.data.website) return c.json({ id: 0, email: parsed.data.email, name: parsed.data.name, role: "CLIENT" }, 201);
 
   const existing = await db.select().from(users).where(eq(users.email, parsed.data.email)).get();
   if (existing) return c.json({ error: "Email already exists" }, 409);
@@ -185,11 +222,14 @@ app.post("/api/register", authRateLimit, async (c) => {
     .returning()
     .get();
 
+  const adminInbox = c.env.CONTACT_INBOX_EMAIL || "hello@linklang.co.uk";
   c.executionCtx.waitUntil(
     Promise.all([
       sendWelcomeEmail(c.env.RESEND_API_KEY, user.email, user.name || "Kliencie"),
-      sendAdminNewUserEmail(c.env.RESEND_API_KEY, c.env.CONTACT_INBOX_EMAIL || "hello@linklang.co.uk", user.email, user.name || "Użytkownik"),
-    ])
+      sendNewUserNotificationEmail(c.env.RESEND_API_KEY, adminInbox, user.name || "Nie podano", user.email),
+    ]).then((results) => {
+      if (results.includes(false)) console.error("Failed to send a registration notification email");
+    })
   );
 
   return c.json({ id: user.id, email: user.email, name: user.name, role: user.role }, 201);
@@ -198,7 +238,7 @@ app.post("/api/register", authRateLimit, async (c) => {
 app.post("/api/login", authRateLimit, async (c) => {
   const db = createDb(c.env.DB);
   const schema = z.object({
-    email: z.string().email(),
+    email: z.string().trim().toLowerCase().email(),
     password: z.string().min(1),
   });
   const parsed = schema.safeParse(await c.req.json());
@@ -225,31 +265,6 @@ app.get("/api/me", authMiddleware, async (c) => {
   const dbUser = await db.select().from(users).where(eq(users.id, user.userId)).get();
   if (!dbUser) return c.json({ error: "User not found" }, 404);
   return c.json({ id: dbUser.id, email: dbUser.email, name: dbUser.name, role: dbUser.role });
-});
-
-app.post("/api/change-password", authMiddleware, authRateLimit, async (c) => {
-  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-  const schema = z.object({
-    currentPassword: z.string().min(1),
-    newPassword: z.string().regex(passwordRegex, "Password must be at least 8 characters with uppercase, lowercase, digit, and special character"),
-  });
-  const parsed = schema.safeParse(await c.req.json().catch(() => null));
-  if (!parsed.success) return c.json({ error: parsed.error.flatten().fieldErrors.newPassword?.[0] || "Invalid input" }, 400);
-
-  if (!c.env.DB) return c.json({ success: true });
-
-  const authUser = c.get("user");
-  const db = createDb(c.env.DB);
-  const user = await db.select().from(users).where(eq(users.id, authUser.userId)).get();
-  if (!user || !user.password) return c.json({ error: "User not found" }, 404);
-
-  const valid = await bcrypt.compare(parsed.data.currentPassword, user.password);
-  if (!valid) return c.json({ error: "Current password is incorrect" }, 400);
-
-  const hashed = await bcrypt.hash(parsed.data.newPassword, 10);
-  await db.update(users).set({ password: hashed }).where(eq(users.id, authUser.userId)).run();
-
-  return c.json({ success: true });
 });
 
 // Orders
@@ -378,7 +393,7 @@ app.post("/api/quotes", authMiddleware, adminMiddleware, async (c) => {
   const user = c.get("user");
   const schema = z.object({
     orderId: z.number(),
-    amount: z.number(),
+    amount: z.number().finite().positive().max(1000000),
     notes: z.string().optional(),
   });
   const parsed = schema.safeParse(await c.req.json());
@@ -565,18 +580,44 @@ app.get("/api/admin/summary", authMiddleware, adminMiddleware, async (c) => {
 
 // Password reset endpoints
 app.post("/api/forgot-password", authRateLimit, async (c) => {
-  const db = createDb(c.env.DB);
-  const schema = z.object({ email: z.string().email() });
-  const parsed = schema.safeParse(await c.req.json());
-  if (!parsed.success) return c.json({ error: "Invalid input" }, 400);
+  let rawBody: unknown = null;
+  try {
+    rawBody = await c.req.json();
+  } catch {
+    // Malformed/empty JSON body — logged below, handled as invalid input.
+  }
+  console.log("[forgot-password] entry", {
+    hasBody: rawBody !== null,
+    emailPresent: !!(rawBody as { email?: unknown } | null)?.email,
+    origin: c.req.header("origin"),
+  });
+
+  const schema = z.object({ email: z.string().trim().toLowerCase().email() });
+  const parsed = schema.safeParse(rawBody);
+  if (!parsed.success) {
+    console.log("[forgot-password] exit: invalid input", { errors: parsed.error.flatten() });
+    return c.json({ error: "Invalid input" }, 400);
+  }
 
   // For dev/local testing without DB, return success anyway
   if (!c.env.DB) {
+    console.log("[forgot-password] exit: no DB binding");
     return c.json({ success: true }, 202);
   }
 
-  const user = await db.select().from(users).where(eq(users.email, parsed.data.email)).get();
-  if (!user) return c.json({ success: true }, 202); // Don't leak if email exists
+  const db = createDb(c.env.DB);
+
+  // Case-insensitive lookup: emails are normalized on registration only since a later commit,
+  // so older rows can still be stored in mixed case and would never match an exact comparison.
+  const user = await db
+    .select()
+    .from(users)
+    .where(sql`lower(${users.email}) = ${parsed.data.email}`)
+    .get();
+  if (!user) {
+    console.log("[forgot-password] exit: user not found (silent success)");
+    return c.json({ success: true }, 202); // Don't leak if email exists
+  }
 
   const resetToken = await new SignJWT({ email: user.email, purpose: "password_reset" })
     .setProtectedHeader({ alg: "HS256" })
@@ -584,15 +625,24 @@ app.post("/api/forgot-password", authRateLimit, async (c) => {
     .setExpirationTime("24h")
     .sign(getJwtKey(c.env));
 
-  const frontendOrigin = getFrontendOrigin(c);
+  const requestedOrigin = c.req.header("origin")?.replace(/\/$/, "");
+  const configuredFrontendOrigins = (c.env.CORS_ORIGIN || "https://linklang.co.uk,https://www.linklang.co.uk")
+    .split(",")
+    .map((origin) => origin.trim().replace(/\/$/, ""))
+    .filter(Boolean);
+  const frontendOrigin = requestedOrigin && configuredFrontendOrigins.includes(requestedOrigin)
+    ? requestedOrigin
+    : "https://linklang.co.uk";
   const resetLink = `${frontendOrigin}/forgot-password?token=${resetToken}`;
-  c.executionCtx.waitUntil(
-    Promise.all([
-      sendPasswordResetEmail(c.env.RESEND_API_KEY, user.email, user.name || "Kliencie", resetLink),
-      sendAdminPasswordResetEmail(c.env.RESEND_API_KEY, c.env.CONTACT_INBOX_EMAIL || "hello@linklang.co.uk", user.email, user.name || "Użytkownik"),
-    ])
-  );
+  console.log("[forgot-password] found user, calling send", { userId: user.id });
+  const sent = await sendPasswordResetEmail(c.env.RESEND_API_KEY, user.email, user.name || "Kliencie", resetLink);
+  console.log("[forgot-password] send result", { sent });
+  if (!sent) {
+    console.log("[forgot-password] exit: send failed");
+    return c.json({ error: "Nie udało się wysłać wiadomości. Spróbuj ponownie później." }, 503);
+  }
 
+  console.log("[forgot-password] exit: success");
   return c.json({ success: true }, 202);
 });
 

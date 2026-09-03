@@ -26,24 +26,29 @@ export default function OrderDetail() {
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, [id]);
+  useEffect(() => {
+    load().catch(() => setLoading(false));
+  }, [id]);
 
   async function sendMessage(e: React.FormEvent) {
     e.preventDefault();
     if (!message.trim()) return;
     setSending(true);
-    await apiFetch(`/api/orders/${id}/messages`, {
-      method: "POST",
-      body: JSON.stringify({ content: message }),
-    });
-    setMessage("");
-    setSending(false);
-    load();
+    try {
+      await apiFetch(`/api/orders/${id}/messages`, {
+        method: "POST",
+        body: JSON.stringify({ content: message }),
+      });
+      setMessage("");
+      await load();
+    } finally {
+      setSending(false);
+    }
   }
 
   async function acceptQuote(quoteId: number) {
     await apiFetch(`/api/quotes/${quoteId}/accept`, { method: "POST" });
-    load();
+    await load();
   }
 
   if (loading) return <div className="flex h-64 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-brand-600" /></div>;
