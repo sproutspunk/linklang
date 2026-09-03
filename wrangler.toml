@@ -1,9 +1,10 @@
 name = "linklang-api"
 main = "backend/src/index.ts"
 compatibility_date = "2024-11-01"
-routes = [
-  { pattern = "api.linklang.co.uk", custom_domain = true }
-]
+
+[[routes]]
+pattern = "api.linklang.co.uk"
+custom_domain = true
 
 [vars]
 CORS_ORIGIN = "http://localhost:5173,http://127.0.0.1:5173,https://linklang.co.uk,https://www.linklang.co.uk"
@@ -15,15 +16,28 @@ database_name = "linklang-db"
 database_id = "42c7f834-5151-4e19-8c52-e6d9835aedd6"
 migrations_dir = "backend/migrations"
 
+[[r2_buckets]]
+binding = "DOCUMENTS_BUCKET"
+bucket_name = "linklang-documents"
+preview_bucket_name = "linklang-documents-preview"
+
 [env.production]
 name = "linklang-api"
-routes = [
-  { pattern = "api.linklang.co.uk", custom_domain = true }
-]
-vars = { CORS_ORIGIN = "https://linklang.co.uk,https://www.linklang.co.uk", CONTACT_INBOX_EMAIL = "meereck@gmail.com" }
+
+[[env.production.routes]]
+pattern = "api.linklang.co.uk"
+custom_domain = true
+
+[env.production.vars]
+CORS_ORIGIN = "https://linklang.co.uk,https://www.linklang.co.uk"
+CONTACT_INBOX_EMAIL = "meereck@gmail.com"
 
 [[env.production.d1_databases]]
 binding = "DB"
 database_name = "linklang-db"
 database_id = "42c7f834-5151-4e19-8c52-e6d9835aedd6"
 migrations_dir = "backend/migrations"
+
+[[env.production.r2_buckets]]
+binding = "DOCUMENTS_BUCKET"
+bucket_name = "linklang-documents"

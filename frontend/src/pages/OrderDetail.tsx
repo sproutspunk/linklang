@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { apiFetch } from "../lib/api";
+import { apiFetch, apiDownload } from "../lib/api";
 import { formatDate, formatCurrency } from "../lib/utils";
-import { ArrowLeft, Loader2, Send, CheckCircle } from "lucide-react";
+import DocumentUpload from "../components/DocumentUpload";
+import { ArrowLeft, Loader2, Send, CheckCircle, Download } from "lucide-react";
 
 const statusFlow = ["NEW", "UNDER_REVIEW", "QUOTE_SENT", "APPROVED", "PAID", "IN_PROGRESS", "READY", "DOWNLOADED"];
 
@@ -119,6 +120,14 @@ export default function OrderDetail() {
         </div>
       )}
 
+      {/* Upload */}
+      <div className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Dodaj pliki</h2>
+        <div className="mt-4">
+          <DocumentUpload orderId={order.id} onUploaded={load} />
+        </div>
+      </div>
+
       {/* Documents */}
       {order.documents?.length > 0 && (
         <div className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -126,7 +135,13 @@ export default function OrderDetail() {
           <ul className="mt-3 space-y-2">
             {order.documents.map((d: any) => (
               <li key={d.id} className="flex items-center justify-between text-sm">
-                <span className="text-slate-700">{d.filename}</span>
+                <button
+                  type="button"
+                  onClick={() => apiDownload(`/api/orders/${order.id}/documents/${d.id}/download`, d.filename)}
+                  className="inline-flex items-center gap-2 text-brand-600 hover:underline"
+                >
+                  <Download className="h-4 w-4" /> {d.filename}
+                </button>
                 {d.isFinal && <span className="rounded bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">Gotowe</span>}
               </li>
             ))}

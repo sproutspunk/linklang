@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs";
 import { eq, desc, sql } from "drizzle-orm";
 import { z } from "zod";
 import { createDb } from "./db.js";
-import { users, orders, quotes, messages, statusLogs } from "./schema.js";
+import { users, orders, quotes, messages, statusLogs, documents } from "./schema.js";
 import { checkRateLimit } from "./rate-limit.js";
 import { sendWelcomeEmail, sendOrderConfirmationEmail, sendQuoteSentEmail, sendStatusChangeEmail, sendContactEmail, sendContactConfirmationEmail, sendPasswordResetEmail, sendAdminNewUserEmail, sendAdminPasswordResetEmail } from "./email.js";
 
@@ -16,6 +16,7 @@ type Bindings = {
   RESEND_API_KEY: string;
   CORS_ORIGIN: string;
   CONTACT_INBOX_EMAIL?: string;
+  DOCUMENTS_BUCKET: R2Bucket;
 };
 
 type UserPayload = { userId: number; role: "CLIENT" | "ADMIN"; email: string };
@@ -461,6 +462,83 @@ app.post("/api/orders/:id/messages", authMiddleware, async (c) => {
     .get();
 
   return c.json(msg, 201);
+});
+
+// Documents
+app.post("/api/orders/:id/documents", authMiddleware, async (c) => {
+  try {
+    const db = createDb(c.env.DB);
+    const user = c.get("user");
+    const orderId = parseInt(c.req.param("id"));
+    if (isNaN(orderId)) return c.json({ error: "Invalid order id" }, 400);
+
+    const order = await db.select().from(orders).where(eq(orders.id, orderId)).get();
+    if (!order) return c.json({ error: "Order not found" }, 404);
+    if (order.userId !== user.userId && user.role !== "ADMIN") return c.json({ error: "Forbidden" }, 403);
+
+    const bucket = c.env.DOCUMENTS_BUCKET;
+    if (!bucket) return c.json({ error: "Document storage not configured" }, 500);
+
+    const formData = await c.req.formData();
+    const file = formData.get("file");
+    if (!file || !(file instanceof File)) return c.json({ error: "No file provided" }, 400);
+
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) return c.json({ error: "File too large (max 10MB)" }, 413);
+
+    const sanitized = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const key = `orders/${orderId}/${crypto.randomUUID()}-${sanitized}`;
+
+    await bucket.put(key, file, {
+      httpMetadata: { contentType: file.type || "application/octet-stream" },
+      customMetadata: { uploadedBy: String(user.userId), orderId: String(orderId) },
+    });
+
+    const doc = await db.insert(documents).values({
+      orderId,
+      filename: file.name,
+      url: key,
+      isFinal: false,
+    }).returning().get();
+
+    return c.json(doc, 201);
+  } catch (err) {
+    console.error("Document upload error:", err);
+    return c.json({ error: "Upload failed" }, 500);
+  }
+});
+
+app.get("/api/orders/:id/documents/:docId/download", authMiddleware, async (c) => {
+  try {
+    const db = createDb(c.env.DB);
+    const user = c.get("user");
+    const orderId = parseInt(c.req.param("id"));
+    const docId = parseInt(c.req.param("docId"));
+    if (isNaN(orderId) || isNaN(docId)) return c.json({ error: "Invalid id" }, 400);
+
+    const order = await db.select().from(orders).where(eq(orders.id, orderId)).get();
+    if (!order) return c.json({ error: "Order not found" }, 404);
+    if (order.userId !== user.userId && user.role !== "ADMIN") return c.json({ error: "Forbidden" }, 403);
+
+    const doc = await db.select().from(documents).where(eq(documents.id, docId)).get();
+    if (!doc || doc.orderId !== orderId) return c.json({ error: "Document not found" }, 404);
+
+    const bucket = c.env.DOCUMENTS_BUCKET;
+    if (!bucket) return c.json({ error: "Document storage not configured" }, 500);
+
+    const object = await bucket.get(doc.url);
+    if (!object) return c.json({ error: "File not found in storage" }, 404);
+
+    const headers = new Headers();
+    headers.set("Content-Type", object.httpMetadata?.contentType || "application/octet-stream");
+    headers.set("Content-Disposition", `attachment; filename="${encodeURIComponent(doc.filename)}"`);
+    if (object.size) headers.set("Content-Length", String(object.size));
+
+    return new Response(object.body, { headers });
+  } catch (err) {
+    console.error("Document download error:", err);
+    return c.json({ error: "Download failed" }, 500);
+  }
 });
 
 // Admin summary

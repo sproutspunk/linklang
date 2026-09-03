@@ -45,9 +45,10 @@ export default function PasswordInput({
         <button
           type="button"
           onClick={() => setVisible((current) => !current)}
-          className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-500 hover:text-brand-600"
+          className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-500 hover:text-brand-700"
           aria-label={toggleLabel}
           title={toggleLabel}
+          aria-pressed={visible}
         >
           {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
         </button>
@@ -55,7 +56,8 @@ export default function PasswordInput({
       <button
         type="button"
         onClick={() => setVisible((current) => !current)}
-        className="mt-1 text-xs font-medium text-brand-600 hover:underline"
+        className="mt-1 text-xs font-medium text-slate-600 underline hover:text-brand-700"
+        aria-pressed={visible}
       >
         {toggleLabel}
       </button>

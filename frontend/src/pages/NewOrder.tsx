@@ -2,13 +2,14 @@ import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { apiFetch } from "../lib/api";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, File as FileIcon, X } from "lucide-react";
 
 export default function NewOrder() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [type, setType] = useState(searchParams.get("type")?.toUpperCase() || "TRANSLATION");
   const [submitting, setSubmitting] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
 
   const types = [
     { value: "TRANSLATION", label: "Tłumaczenie dokumentów" },
@@ -31,11 +32,29 @@ export default function NewOrder() {
         method: "POST",
         body: JSON.stringify(payload),
       });
+      for (const file of files) {
+        const uploadForm = new FormData();
+        uploadForm.append("file", file);
+        await apiFetch(`/api/orders/${data.id}/documents`, {
+          method: "POST",
+          body: uploadForm,
+        });
+      }
       navigate(`/portal/${data.id}`);
     } catch {
       alert("Nie udało się utworzyć zlecenia");
       setSubmitting(false);
     }
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const selected = Array.from(e.target.files || []);
+    setFiles((prev) => [...prev, ...selected].slice(0, 5));
+    e.target.value = "";
+  }
+
+  function removeFile(index: number) {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
   }
 
   return (
@@ -111,6 +130,30 @@ export default function NewOrder() {
         <div>
           <label className="block text-sm font-medium text-slate-700">Uwagi</label>
           <textarea name="notes" rows={4} placeholder="Opisz czego potrzebujesz..." className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700">Załączniki</label>
+          <input
+            type="file"
+            multiple
+            onChange={handleFileChange}
+            className="mt-1 block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-brand-700 hover:file:bg-brand-100"
+          />
+          <p className="mt-1 text-xs text-slate-500">Maks. 5 plików, każdy do 10 MB.</p>
+          {files.length > 0 && (
+            <ul className="mt-3 space-y-2">
+              {files.map((file, i) => (
+                <li key={i} className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+                  <span className="flex items-center gap-2 truncate text-slate-700">
+                    <FileIcon className="h-4 w-4 shrink-0 text-slate-400" /> {file.name}
+                  </span>
+                  <button type="button" onClick={() => removeFile(i)} className="text-slate-400 hover:text-red-600" aria-label="Usuń plik">
+                    <X className="h-4 w-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
         <button type="submit" disabled={submitting}
           className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50">
