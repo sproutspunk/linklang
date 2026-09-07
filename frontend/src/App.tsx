@@ -11,6 +11,7 @@ import Portal from "./pages/Portal";
 import NewOrder from "./pages/NewOrder";
 import OrderDetail from "./pages/OrderDetail";
 import Admin from "./pages/Admin";
+import PaymentPreview from "./pages/PaymentPreview";
 function ProtectedRoute({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
@@ -28,6 +29,7 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
+        <Route path="/payment-preview" element={<PaymentPreview />} />
         <Route path="/portal" element={<ProtectedRoute><Portal /></ProtectedRoute>} />
         <Route path="/portal/new" element={<ProtectedRoute><NewOrder /></ProtectedRoute>} />
         <Route path="/portal/:id" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />

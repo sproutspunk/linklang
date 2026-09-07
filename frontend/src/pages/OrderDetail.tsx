@@ -3,7 +3,8 @@ import { useParams, Link } from "react-router-dom";
 import { apiFetch, apiDownload } from "../lib/api";
 import { formatDate, formatCurrency } from "../lib/utils";
 import DocumentUpload from "../components/DocumentUpload";
-import { ArrowLeft, Loader2, Send, CheckCircle, Download } from "lucide-react";
+import { ArrowLeft, Loader2, Send, CheckCircle, CreditCard } from "lucide-react";
+import { Download } from "lucide-react";
 
 const statusFlow = ["NEW", "UNDER_REVIEW", "QUOTE_SENT", "APPROVED", "PAID", "IN_PROGRESS", "READY", "DOWNLOADED"];
 
@@ -19,6 +20,8 @@ export default function OrderDetail() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const [paying, setPaying] = useState(false);
+  const [paymentError, setPaymentError] = useState("");
 
   async function load() {
     const data = await apiFetch(`/api/orders/${id}`);
@@ -49,6 +52,18 @@ export default function OrderDetail() {
   async function acceptQuote(quoteId: number) {
     await apiFetch(`/api/quotes/${quoteId}/accept`, { method: "POST" });
     await load();
+  }
+
+  async function startCheckout(quoteId: number) {
+    setPaying(true);
+    setPaymentError("");
+    try {
+      const { checkoutUrl } = await apiFetch(`/api/quotes/${quoteId}/checkout`, { method: "POST" });
+      window.location.assign(checkoutUrl);
+    } catch (error) {
+      setPaymentError(error instanceof Error ? error.message : "Nie udało się rozpocząć płatności.");
+      setPaying(false);
+    }
   }
 
   if (loading) return <div className="flex h-64 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-brand-600" /></div>;
@@ -117,11 +132,20 @@ export default function OrderDetail() {
               </button>
             )}
             {latestQuote.accepted && (
-              <span className="inline-flex items-center gap-1 text-sm font-medium text-emerald-600">
-                <CheckCircle className="h-4 w-4" /> Zaakceptowana
-              </span>
+              latestQuote.paid ? (
+                <span className="inline-flex items-center gap-1 text-sm font-medium text-emerald-600">
+                  <CheckCircle className="h-4 w-4" /> Opłacona
+                </span>
+              ) : (
+                <button onClick={() => startCheckout(latestQuote.id)} disabled={paying}
+                  className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50">
+                  {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                  Zapłać online
+                </button>
+              )
             )}
           </div>
+          {paymentError && <p className="mt-3 text-sm text-red-600">{paymentError}</p>}
         </div>
       )}
 

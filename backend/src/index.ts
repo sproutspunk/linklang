@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs";
 import { eq, desc, sql } from "drizzle-orm";
 import { z } from "zod";
 import { createDb } from "./db.js";
-import { users, orders, quotes, messages, statusLogs, documents } from "./schema.js";
+import { users, orders, quotes, messages, payments, statusLogs, documents } from "./schema.js";
 import { checkRateLimit } from "./rate-limit.js";
 import { sendWelcomeEmail, sendNewUserNotificationEmail, sendOrderConfirmationEmail, sendQuoteSentEmail, sendStatusChangeEmail, sendPasswordResetEmail, sendContactEmail, sendContactConfirmationEmail } from "./email.js";
 
@@ -17,11 +17,11 @@ type Bindings = {
   CORS_ORIGIN: string;
   CONTACT_INBOX_EMAIL?: string;
   DOCUMENTS_BUCKET: R2Bucket;
-  // Injected at deploy time via `wrangler deploy --var BUILD_COMMIT:... --var BUILD_TIMESTAMP:...`
-  // (see .github/workflows/deploy.yml). Used only by GET /api/_diag/version to prove which
-  // commit is actually running on api.linklang.co.uk.
   BUILD_COMMIT?: string;
   BUILD_TIMESTAMP?: string;
+  APP_URL: string;
+  STRIPE_SECRET_KEY: string;
+  STRIPE_WEBHOOK_SECRET: string;
 };
 
 type UserPayload = { userId: number; role: "CLIENT" | "ADMIN"; email: string };
@@ -109,6 +109,30 @@ function getJwtKey(env: Bindings) {
   return new TextEncoder().encode(env.JWT_SECRET);
 }
 
+function getAppUrl(env: Bindings) {
+  return env.APP_URL || (env.CORS_ORIGIN || "http://localhost:5173").split(",")[0].trim();
+}
+
+async function verifyStripeSignature(payload: string, signature: string | undefined, secret: string) {
+  if (!signature || !secret) return false;
+
+  const parts = Object.fromEntries(signature.split(",").map((part) => part.split("=", 2)));
+  const timestamp = parts.t;
+  const expectedSignature = parts.v1;
+  if (!timestamp || !expectedSignature || Math.abs(Date.now() / 1000 - Number(timestamp)) > 300) return false;
+
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const signed = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${timestamp}.${payload}`));
+  const actualSignature = Array.from(new Uint8Array(signed)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  return actualSignature === expectedSignature;
+}
+
 async function authMiddleware(c: any, next: any) {
   const header = c.req.header("authorization");
   if (!header?.startsWith("Bearer ")) return c.json({ error: "Unauthorized" }, 401);
@@ -140,17 +164,6 @@ async function authRateLimit(c: any, next: any) {
   if (!ok) return c.json({ error: "Too many requests" }, 429);
   await next();
 }
-
-// Diagnostic endpoint: proves which commit is actually deployed behind api.linklang.co.uk.
-// `hasForgotPasswordFix` is a hardcoded marker for the case-insensitive email lookup fix
-// (PR #9) — if this endpoint is reachable at all, that fix is present in this build.
-app.get("/api/_diag/version", (c) => {
-  return c.json({
-    commit: c.env.BUILD_COMMIT || "unknown",
-    hasForgotPasswordFix: true,
-    timestamp: c.env.BUILD_TIMESTAMP || "unknown",
-  });
-});
 
 // Auth routes
 app.post("/api/register", authRateLimit, async (c) => {
@@ -392,6 +405,81 @@ app.post("/api/quotes/:id/accept", authMiddleware, async (c) => {
   await db.insert(statusLogs).values({ orderId: quote.orderId, status: "APPROVED", changedBy: user.userId }).run();
 
   return c.json({ success: true });
+});
+
+app.post("/api/quotes/:id/checkout", authMiddleware, async (c) => {
+  const db = createDb(c.env.DB);
+  const user = c.get("user");
+  const quoteId = parseInt(c.req.param("id"));
+  const quote = await db.select().from(quotes).where(eq(quotes.id, quoteId)).get();
+  if (!quote) return c.json({ error: "Not found" }, 404);
+  if (!quote.accepted || quote.userId !== user.userId) return c.json({ error: "Forbidden" }, 403);
+  if (quote.paid) return c.json({ error: "Quote is already paid" }, 409);
+  if (!c.env.STRIPE_SECRET_KEY) return c.json({ error: "Stripe is not configured" }, 503);
+
+  const amount = Math.round(quote.amount * 100);
+  if (amount < 1) return c.json({ error: "Invalid quote amount" }, 400);
+
+  const form = new URLSearchParams({
+    mode: "payment",
+    "payment_method_types[0]": "card",
+    "line_items[0][price_data][currency]": quote.currency.toLowerCase(),
+    "line_items[0][price_data][product_data][name]": `LinkLang order #${quote.orderId}`,
+    "line_items[0][price_data][unit_amount]": String(amount),
+    "line_items[0][quantity]": "1",
+    customer_email: user.email,
+    client_reference_id: String(quote.id),
+    success_url: `${getAppUrl(c.env)}/portal/${quote.orderId}?payment=success`,
+    cancel_url: `${getAppUrl(c.env)}/portal/${quote.orderId}?payment=cancelled`,
+  });
+  const response = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${c.env.STRIPE_SECRET_KEY}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: form,
+  });
+  const session = await response.json() as { id?: string; url?: string; error?: { message?: string } };
+  if (!response.ok || !session.id || !session.url) {
+    console.error("Stripe Checkout error", session.error?.message);
+    return c.json({ error: "Could not create payment session" }, 502);
+  }
+
+  await db.insert(payments).values({
+    quoteId: quote.id,
+    provider: "stripe",
+    providerId: session.id,
+    amount: quote.amount,
+    status: "pending",
+  }).run();
+
+  return c.json({ checkoutUrl: session.url });
+});
+
+app.post("/api/stripe/webhook", async (c) => {
+  const payload = await c.req.text();
+  const valid = await verifyStripeSignature(payload, c.req.header("stripe-signature"), c.env.STRIPE_WEBHOOK_SECRET);
+  if (!valid) return c.json({ error: "Invalid Stripe signature" }, 400);
+
+  const event = JSON.parse(payload) as { type: string; data: { object: { id: string; payment_status?: string } } };
+  if (event.type !== "checkout.session.completed" || event.data.object.payment_status !== "paid") {
+    return c.json({ received: true });
+  }
+
+  const db = createDb(c.env.DB);
+  const payment = await db.select().from(payments).where(eq(payments.providerId, event.data.object.id)).get();
+  if (!payment || payment.status === "paid") return c.json({ received: true });
+
+  const quote = await db.select().from(quotes).where(eq(quotes.id, payment.quoteId)).get();
+  if (!quote) return c.json({ received: true });
+
+  await db.update(payments).set({ status: "paid", paidAt: new Date() }).where(eq(payments.id, payment.id)).run();
+  await db.update(quotes).set({ paid: true }).where(eq(quotes.id, quote.id)).run();
+  await db.update(orders).set({ status: "PAID" }).where(eq(orders.id, quote.orderId)).run();
+  await db.insert(statusLogs).values({ orderId: quote.orderId, status: "PAID", changedBy: quote.userId }).run();
+
+  return c.json({ received: true });
 });
 
 // Messages
