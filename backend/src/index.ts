@@ -94,13 +94,19 @@ app.post("/api/contact", authRateLimit, async (c) => {
   if (!parsed.success) return c.json({ error: "Invalid input" }, 400);
 
   const contactInbox = c.env.CONTACT_INBOX_EMAIL || "hello@linklang.co.uk";
+  if (!c.env.RESEND_API_KEY || !c.env.RESEND_API_KEY.trim()) {
+    return c.json({ error: "The message could not be sent. Please try again later." }, 503);
+  }
 
-  c.executionCtx.waitUntil(
-    Promise.all([
-      sendContactEmail(c.env.RESEND_API_KEY, contactInbox, parsed.data.name, parsed.data.email, parsed.data.message),
-      sendContactConfirmationEmail(c.env.RESEND_API_KEY, parsed.data.email, parsed.data.name),
-    ])
-  );
+  const [adminSent, confirmationSent] = await Promise.all([
+    sendContactEmail(c.env.RESEND_API_KEY, contactInbox, parsed.data.name, parsed.data.email, parsed.data.message),
+    sendContactConfirmationEmail(c.env.RESEND_API_KEY, parsed.data.email, parsed.data.name),
+  ]);
+
+  if (!adminSent || !confirmationSent) {
+    return c.json({ error: "The message could not be sent. Please try again later." }, 503);
+  }
+
   return c.json({ success: true }, 202);
 });
 

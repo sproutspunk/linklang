@@ -25,6 +25,8 @@ function escapeHtml(value: string) {
 }
 
 async function send(apiKey: string, subject: string, to: string, html: string, replyTo?: string): Promise<boolean> {
+  if (!apiKey || !apiKey.trim()) return false;
+
   try {
     const resend = new Resend(apiKey);
     const { error } = await resend.emails.send({ from: FROM, to, subject, html, ...(replyTo ? { replyTo } : {}) });
