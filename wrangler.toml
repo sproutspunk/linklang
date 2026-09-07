@@ -1,18 +1,29 @@
 # Single source of truth for the "linklang-api" Worker.
 #
-# NOTE: This file intentionally defines only `[env.production]` and no
-# default (top-level) `[vars]` / `[[d1_databases]]` / `routes`. Previously
-# both a default environment and `[env.production]` declared the SAME
-# worker `name` and the SAME custom domain `routes`, which meant whichever
-# `wrangler deploy` command ran last (with or without `--env production`)
-# silently won the route and could overwrite the other environment's
-# bindings. All deploys and local dev now explicitly target
-# `--env production` (see backend/package.json and
-# .github/workflows/deploy.yml) so there is only ever one environment that
-# can serve `api.linklang.co.uk`.
+# IMPORTANT: Cloudflare's own "Workers Builds" Git integration (the
+# cloudflare-workers-and-pages GitHub App) deploys this Worker on every push
+# to `main` by running a plain `wrangler deploy` — WITHOUT `--env production`
+# — racing against our `.github/workflows/deploy.yml` job (which does use
+# `--env production`). Both deploy the SAME script name `linklang-api`, so
+# whichever one finishes last wins and its bindings become live. To make
+# sure the Worker always has DB/R2/vars regardless of which pipeline wins,
+# the top-level (default) environment below duplicates the same bindings as
+# `[env.production]`. Only `routes` stays production-only, since the custom
+# domain attachment does not get removed by a routeless deploy.
 name = "linklang-api"
 main = "backend/src/index.ts"
 compatibility_date = "2024-11-01"
+vars = { CORS_ORIGIN = "https://linklang.co.uk,https://www.linklang.co.uk", CONTACT_INBOX_EMAIL = "meereck@gmail.com" }
+
+[[d1_databases]]
+binding = "DB"
+database_name = "linklang-db"
+database_id = "42c7f834-5151-4e19-8c52-e6d9835aedd6"
+migrations_dir = "backend/migrations"
+
+[[r2_buckets]]
+binding = "DOCUMENTS_BUCKET"
+bucket_name = "linklang-documents"
 
 [env.production]
 name = "linklang-api"
