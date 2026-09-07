@@ -10,7 +10,7 @@
     "db:migrate:local": "wrangler d1 migrations apply linklang-db --local --env production",
     "db:migrate:remote": "wrangler d1 migrations apply linklang-db --remote --env production",
     "db:seed:local": "node scripts/generate-seed.mjs && wrangler d1 execute linklang-db --local --env production --file=./drizzle/seed.sql",
-    "db:seed:remote": "node scripts/generate-seed.mjs && wrangler d1 execute linklang-db --remote --env production --file=./drizzle/seed.sql"
+    "db:seed:remote": "node -e \"if(process.env.CONFIRM_SEED_REMOTE!=='yes'){console.error('Refusing to seed PRODUCTION D1 with weak demo accounts (admin123/client123). Re-run as: CONFIRM_SEED_REMOTE=yes npm run db:seed:remote -w backend');process.exit(1)}\" && node scripts/generate-seed.mjs && wrangler d1 execute linklang-db --remote --env production --file=./drizzle/seed.sql"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
