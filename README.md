@@ -30,7 +30,7 @@ LinkLang is a professional translation services platform that connects clients w
 
 **Frontend:**
 - React 18.3.1 with TypeScript
-- Vite 8.2.1 (build tool)
+- Vite 5.3.4 (build tool)
 - React Router DOM 6.25.1
 - Zustand 4.5.4 (state management)
 - Tailwind CSS 3.4.4
@@ -45,6 +45,7 @@ LinkLang is a professional translation services platform that connects clients w
 - bcryptjs 2.4.3 (password hashing)
 - Zod 3.23.8 (validation)
 - Resend 6.19.0 (email service)
+- Stripe Checkout (payment processing, called via REST API)
 
 **Infrastructure:**
 - Cloudflare Workers (serverless backend)
@@ -65,7 +66,6 @@ linklang-vite/
 │   │   ├── email.ts           # Email notification service
 │   │   └── rate-limit.ts      # Anti-brute-force protection
 │   ├── migrations/            # Database migrations
-│   ├── wrangler.toml          # Cloudflare Workers config
 │   └── package.json
 │
 ├── frontend/                   # React SPA with Vite
@@ -80,15 +80,18 @@ linklang-vite/
 │   │   │   ├── Portal.tsx     # Client dashboard
 │   │   │   ├── NewOrder.tsx   # Create order form
 │   │   │   ├── OrderDetail.tsx # Order communication hub
+│   │   │   ├── PaymentPreview.tsx # Stripe checkout preview
 │   │   │   └── Admin.tsx      # Admin dashboard
 │   │   ├── components/
 │   │   │   ├── Layout.tsx     # Main layout wrapper
 │   │   │   ├── Navbar.tsx     # Navigation bar
-│   │   │   └── CookieBanner.tsx # Cookie preferences
+│   │   │   ├── CookieBanner.tsx # Cookie preferences
+│   │   │   ├── ChangePasswordForm.tsx # Account password change
+│   │   │   ├── DocumentUpload.tsx # Order document upload
+│   │   │   └── PasswordInput.tsx # Password field with show/hide toggle
 │   │   ├── lib/
 │   │   │   ├── store.ts       # Zustand auth state
 │   │   │   ├── api.ts         # API client wrapper
-│   │   │   ├── i18n.ts        # Translations (if separate)
 │   │   │   └── utils.ts       # Helper functions
 │   │   ├── App.tsx            # Route definitions
 │   │   ├── main.tsx           # Entry point
@@ -137,6 +140,10 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 JWT_SECRET=<your-generated-secret>
 RESEND_API_KEY=<resend-api-key-for-emails>
 CORS_ORIGIN=http://localhost:5173,https://linklang.co.uk
+APP_URL=http://localhost:5173
+CONTACT_INBOX_EMAIL=<inbox-for-contact-form-and-signup-notifications>
+STRIPE_SECRET_KEY=<stripe-secret-key>
+STRIPE_WEBHOOK_SECRET=<stripe-webhook-signing-secret>
 ```
 
 **Frontend** - Create `frontend/.env.development`:
@@ -235,34 +242,33 @@ npx wrangler pages deploy dist
 npx wrangler deploy --env production
 ```
 
-To confirm which commit is actually live on `api.linklang.co.uk` (proves the
-CI deploy ran and includes your latest change):
-
-```bash
-curl -s https://api.linklang.co.uk/api/_diag/version
-# {"commit":"<sha>","hasForgotPasswordFix":true,"timestamp":"<build time>"}
-```
-
 ### Environment Setup (Production)
 
 1. **Cloudflare Dashboard** → Workers & Pages → Settings
-2. Set secrets:
+2. Create the R2 bucket used for order document uploads (name must match
+   `wrangler.toml`'s `[[env.production.r2_buckets]]` binding):
+```bash
+npx wrangler r2 bucket create linklang-documents
+```
+3. Set secrets:
 ```bash
 npx wrangler secret put JWT_SECRET --env production
 npx wrangler secret put RESEND_API_KEY --env production
+npx wrangler secret put STRIPE_SECRET_KEY --env production
+npx wrangler secret put STRIPE_WEBHOOK_SECRET --env production
 ```
-3. **GitHub Actions** repo secrets/vars: `CLOUDFLARE_API_TOKEN`,
+4. **GitHub Actions** repo secrets/vars: `CLOUDFLARE_API_TOKEN`,
    `CLOUDFLARE_ACCOUNT_ID` (secret or repo variable), optional
    `VITE_API_URL`, `CLOUDFLARE_PAGES_PROJECT`.
 
-4. **Configure CORS**:
+5. **Configure CORS**:
 Update `wrangler.toml`:
 ```toml
 [env.production]
 vars = { CORS_ORIGIN = "https://linklang.co.uk" }
 ```
 
-5. **Apply D1 migrations on remote** (also done automatically by CI on every
+6. **Apply D1 migrations on remote** (also done automatically by CI on every
    push to `main`, but useful to run manually / verify):
 ```bash
 npx wrangler d1 migrations apply linklang-db --remote --env production
@@ -317,6 +323,9 @@ npx wrangler d1 execute linklang-db --remote --env production \
 - `POST /api/register` - User registration
 - `POST /api/login` - User login
 - `GET /api/me` - Get current user info
+- `POST /api/change-password` - Change own password
+- `POST /api/forgot-password` - Request password reset email
+- `POST /api/reset-password` - Reset password with emailed token
 
 ### Orders
 - `GET /api/orders` - List orders (role-based filtering)
@@ -324,13 +333,19 @@ npx wrangler d1 execute linklang-db --remote --env production \
 - `GET /api/orders/:id` - Get order details
 - `PATCH /api/orders/:id/status` - Update order status (admin only)
 
-### Quotes
+### Quotes & Payments
 - `POST /api/quotes` - Create quote (admin only)
 - `POST /api/quotes/:id/accept` - Accept quote
+- `POST /api/quotes/:id/checkout` - Start Stripe Checkout session for an accepted quote
+- `POST /api/stripe/webhook` - Stripe webhook, marks quote/payment as paid
 
 ### Communication
 - `GET /api/orders/:id/messages` - Get order messages
 - `POST /api/orders/:id/messages` - Send message
+
+### Documents
+- `POST /api/orders/:id/documents` - Upload a document to an order
+- `GET /api/orders/:id/documents/:docId/download` - Download an order document
 
 ### Admin
 - `GET /api/admin/summary` - Dashboard statistics
