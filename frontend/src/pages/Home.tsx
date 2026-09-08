@@ -13,39 +13,39 @@ type Language = "PL" | "EN";
 const content = {
   PL: {
     hero: {
-      title: "Tłumaczenia polsko - angielskie\ni obsługa językowa",
-      subtitle: "W całej Szkocji i Anglii online. W promieniu 25 mil od Aberdeen także osobiście. Wyślij dokument, otrzymaj wycenę w kilka minut, zapłać online, pobierz gotowe tłumaczenie. Bez dzwonienia. Bez czekania na e-mail.",
-      cta: "Zacznij teraz",
+      title: "Tłumaczenia polsko-angielskie w Banff i online",
+      subtitle: "Tłumaczę dokumenty oraz rozmowy z polskiego na angielski i z angielskiego na polski. Usługi zdalne są dostępne w całej Wielkiej Brytanii. Na spotkania wyjeżdżam z Banff w Szkocji.\n\nWycenę przygotowuję osobiście po zapoznaniu się z materiałami i oczekiwanym terminem realizacji.",
+      cta: "Zapytaj o wycenę",
       ctaPortal: "Przejdź do panelu",
-      pricing: "Tłumaczenia od £35 · Tłumacz ustny od £70/h",
+      pricing: "Tłumaczenia od £35 · Tłumacz ustny od £60/h",
     },
     services: {
       title: "Czego potrzebujesz?",
       items: [
         {
           icon: "doc",
-          title: "Tłumaczenie dokumentów",
-          desc: "Umowy, akta stanu cywilnego, dokumentacja medyczna, zaświadczenia. Polski na angielski i z powrotem. Cena od £35 - zależy od objętości i terminu. Nie tłumaczę przez Google Translate i nie zlecam tego komuś w Azji. Każdy tekst czytam sam.",
+          title: "Tłumaczenia dokumentów",
+          desc: "Prześlij dokument i podaj, do czego będzie wykorzystany. Na tej podstawie ocenię zakres pracy i przygotuję wycenę.\n\nTłumaczenie jednego tekstu ogólnego do 350 słów kosztuje £35. Cena obejmuje tłumaczenie w jednym kierunku, sprawdzenie tekstu i zachowanie prostego układu dokumentu. Dłuższe teksty ogólne rozliczam po £0.10 za słowo w materiale źródłowym. Stawka obejmuje cały tekst.\n\nDokumenty specjalistyczne, pismo odręczne i materiały wymagające odtworzenia złożonego układu wyceniam indywidualnie.",
         },
         {
           icon: "users",
-          title: "Tłumacz ustny na miejscu",
-          desc: "Przyjdę z Tobą do urzędu, szpitala, na spotkanie z pracodawcą lub do kancelarii. Dojeżdżam osobiście w promieniu 25 mil od Aberdeen: Stonehaven, Banchory, Inverurie, Ellon, Peterhead, Fraserburgh, Turriff. Dalej tylko online lub telefon. Od £70 za godzinę, minimum 1h.",
+          title: "Tłumaczenia ustne na miejscu",
+          desc: "Pomagam w komunikacji podczas spotkań z pracodawcą, wizyt w instytucjach publicznych i rozmów związanych z działalnością firmy.\n\nCena wynosi £60 za pierwszą godzinę oraz £15 za każde kolejne rozpoczęte 15 minut. Minimalna opłata obejmuje jedną godzinę. Koszt dojazdu jest podawany osobno w wycenie przed rezerwacją.",
         },
         {
           icon: "phone",
-          title: "Telefon i wideorozmowa",
-          desc: "Zoom, Teams, WhatsApp. Dostępne w całym UK. Jeśli potrzebujesz tłumaczenia od ręki lub masz krótkie pytanie do lekarza lub urzędnika - dzwonię razem z Tobą. Od £45 za 30 minut.",
+          title: "Tłumaczenia przez telefon i wideo",
+          desc: "Dołączam do wcześniej umówionej rozmowy i tłumaczę wypowiedzi uczestników w obu kierunkach.\n\nCena wynosi £30 za pierwsze 30 minut oraz £15 za każde kolejne rozpoczęte 15 minut.",
         },
         {
           icon: "landmark",
-          title: "Pomoc w instytucjach publicznych",
-          desc: "Universal Credit, HMRC, Jobcentre Plus, NHS. Znam formularze, wiem jakie pytania zadają i jakich dokumentów wymagają. Nie wypełnię formularza za Ciebie, ale przetłumaczę pytania i Twoje odpowiedzi dokładnie tak, jak je podasz. Dostępne osobiście (25 mil od Aberdeen) lub online (całe UK).",
+          title: "Pomoc językowa w instytucjach publicznych",
+          desc: "Tłumaczę pytania, odpowiedzi oraz informacje potrzebne podczas kontaktu z Universal Credit, HMRC, Jobcentre Plus i NHS.\n\nPrzy zgłoszeniu podaj nazwę instytucji, temat sprawy i termin spotkania. Pozwoli to ustalić zakres potrzebnej pomocy językowej.",
         },
         {
           icon: "building",
-          title: "Oferta dla firm",
-          desc: "Onboarding polskojęzycznych pracowników, tłumaczenie dokumentów HR, wizyty na budowie, audyty BHP, rozmowy dyscyplinarne. Pakiety abonamentowe - jeśli potrzebujesz tłumacza regularnie, negocjujemy stałą stawkę niższą niż cena jednostkowa. Dostępne osobiście w promieniu 25 mil od Aberdeen lub online w całym UK.",
+          title: "Obsługa firm",
+          desc: "Oferuję tłumaczenia dokumentów HR oraz wsparcie językowe podczas wdrażania polskojęzycznych pracowników, wizyt na budowie, audytów BHP i spotkań dyscyplinarnych.\n\nJeżeli potrzebujesz regularnej obsługi, podaj przewidywaną liczbę godzin i rodzaj zadań. Przygotuję wycenę odpowiadającą temu zakresowi.",
         },
       ],
     },
@@ -79,11 +79,11 @@ const content = {
   },
   EN: {
     hero: {
-      title: "Polish - English translation\nand interpreting",
-      subtitle: "Online anywhere in the UK. In person within a 25-mile radius of Aberdeen. Upload your document, get a quote in minutes, pay online, download when ready. No phone calls. No waiting for e-mails.",
-      cta: "Get started",
+      title: "Polish-English translation and interpreting in Banff and online",
+      subtitle: "I translate documents and interpret conversations from Polish into English and from English into Polish. Remote services are available throughout the UK. I travel from Banff in Scotland for appointments.\n\nI prepare each quote personally after reviewing the material and your requested deadline.",
+      cta: "Request a quote",
       ctaPortal: "Go to dashboard",
-      pricing: "Written translation from £35 · On-site interpreting from £70/h",
+      pricing: "Written translation from £35 · On-site interpreting from £60/h",
     },
     services: {
       title: "What do you need?",
@@ -91,27 +91,27 @@ const content = {
         {
           icon: "doc",
           title: "Document translation",
-          desc: "Contracts, birth and marriage certificates, medical records, employer references. Polish to English and back. From £35, depending on length and deadline. I do not run your text through Google Translate or outsource it. I read every word myself.",
+          desc: "Send your document and explain what you need it for. I will assess the work and prepare a quote.\n\nTranslation of one general text of up to 350 words costs £35. This includes translation in one direction, checking the text and retaining a simple document layout. Longer general texts are charged at £0.10 per word in the source document. This rate applies to the whole text.\n\nSpecialist documents, handwritten texts and materials requiring complex formatting are quoted individually.",
         },
         {
           icon: "users",
-          title: "On-site interpreting",
-          desc: "I attend with you at the GP surgery, the Jobcentre, the solicitor's office, or the HR meeting. I travel in person within a 25-mile radius of Aberdeen: Stonehaven, Banchory, Inverurie, Ellon, Peterhead, Fraserburgh, Turriff. Beyond that, phone or video only. From £70 per hour, one-hour minimum.",
+          title: "In-person interpreting",
+          desc: "I help with communication at meetings with employers, appointments with public services and business discussions.\n\nThe fee is £60 for the first hour and £15 for each additional 15-minute period or part of one. The minimum charge is one hour. Travel is quoted separately before you book.",
         },
         {
           icon: "phone",
           title: "Phone and video interpreting",
-          desc: "Zoom, Teams, WhatsApp. Available UK-wide. If you need a quick call with your GP, your letting agent, or your child's school - I dial in with you. From £45 per 30-minute session.",
+          desc: "I join a pre-booked call and interpret what each participant says in both directions.\n\nThe fee is £30 for the first 30 minutes and £15 for each additional 15-minute period or part of one.",
         },
         {
           icon: "landmark",
-          title: "Public services support",
-          desc: "Universal Credit, HMRC, Jobcentre Plus, NHS. I know the forms, the questions they ask, and the documents they want. I will not fill the form in for you, but I will translate every question and your answer exactly as you give it. In person within 25 miles of Aberdeen, or online UK-wide.",
+          title: "Language support for public services",
+          desc: "I interpret questions, answers and information needed when dealing with Universal Credit, HMRC, Jobcentre Plus and the NHS.\n\nWhen you get in touch, include the organisation’s name, the subject of your enquiry and the appointment date. This helps establish the language support you need.",
         },
         {
           icon: "building",
-          title: "Business packages",
-          desc: "Onboarding Polish-speaking staff, translating HR documents, site visits, health-and-safety audits, disciplinary hearings. Retainer packages available - if you need regular support, we agree a fixed monthly rate lower than the standard hourly price. In person within 25 miles of Aberdeen, or online UK-wide.",
+          title: "Business services",
+          desc: "I offer HR document translation and language support for onboarding Polish-speaking employees, construction site visits, health and safety audits and disciplinary meetings.\n\nFor regular support, let me know the expected number of hours and the type of work. I will prepare a quote for that scope.",
         },
       ],
     },
@@ -137,7 +137,7 @@ const content = {
     },
     coverage: {
       title: "Service area",
-      subtitle: "Polish - English translator available in:",
+      subtitle: "Polish-English translator available in:",
     },
     disclaimer: "I am not a sworn translator. If your document requires a certified translation for court, the Home Office, or the General Register Office, I will refer you to a certified partner. I do not take money for work I cannot perform legally.",
     footer: "© 2026 LinkLang. linklang.co.uk",
@@ -303,12 +303,12 @@ export default function Home() {
       <section id="contact-section" className="border-t border-slate-200 bg-brand-50">
         <div className="mx-auto max-w-2xl px-4 py-16">
           <div className="text-center mb-12">
-            <h2 className="text-2xl font-medium text-slate-900">{lang === "PL" ? "Wyślij wiadomość" : "Send a message"}</h2>
-            <p className="mt-2 text-sm text-slate-600">{lang === "PL" ? "Skontaktuj się bezpośrednio" : "Get in touch directly"}</p>
+            <h2 className="text-2xl font-medium text-slate-900">{lang === "PL" ? "Wyślij wiadomość" : "Send message"}</h2>
+            <p className="mt-2 text-sm text-slate-600">{lang === "PL" ? "Napisz, czego dotyczy zlecenie i na kiedy potrzebujesz tłumaczenia." : "Tell me what you need translated and when you need it."}</p>
           </div>
           <form onSubmit={handleContactSubmit} className="space-y-4">
             <div>
-              <label htmlFor="contact-name" className="block text-sm font-medium text-slate-900">{lang === "PL" ? "Imię i nazwisko" : "Name"}</label>
+              <label htmlFor="contact-name" className="block text-sm font-medium text-slate-900">{lang === "PL" ? "Imię i nazwisko" : "Full name"}</label>
               <input 
                 id="contact-name"
                 type="text" 
@@ -319,7 +319,7 @@ export default function Home() {
               />
             </div>
             <div>
-              <label htmlFor="contact-email" className="block text-sm font-medium text-slate-900">Email</label>
+              <label htmlFor="contact-email" className="block text-sm font-medium text-slate-900">{lang === "PL" ? "Adres e-mail" : "Email address"}</label>
               <input 
                 id="contact-email"
                 type="email" 
@@ -417,10 +417,10 @@ export default function Home() {
             </Link>
             <div className="flex gap-6 text-sm">
               <Link to="/privacy" className="text-slate-700 hover:text-brand-600 font-medium">
-                {lang === "PL" ? "Polityka prywatności" : "Privacy"}
+                {lang === "PL" ? "Polityka prywatności" : "Privacy policy"}
               </Link>
               <Link to="/terms" className="text-slate-700 hover:text-brand-600 font-medium">
-                {lang === "PL" ? "Warunki" : "Terms"}
+                {lang === "PL" ? "Regulamin" : "Terms and conditions"}
               </Link>
             </div>
           </div>
