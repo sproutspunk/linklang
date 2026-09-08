@@ -18,7 +18,9 @@ LinkLang is a professional translation services platform that connects clients w
 - **Real-time Communication**: Messaging system between clients and service providers
 - **Payment Processing**: Online payment integration
 - **Admin Dashboard**: Comprehensive order and client management
-- **Multi-language Support**: Full PL/EN translations throughout the platform
+- **Health-data Consent**: Versioned, auditable consent for medical orders and NHS requests, with client withdrawal and administrator records
+- **Multi-language Support**: PL/EN content and language switching throughout public and client views
+- **Support Centre**: PL/EN help page for common service, account, payment, and privacy questions
 - **Cookie Management**: Transparent cookie preferences with GDPR compliance
 - **Responsive Design**: Mobile-first design with Tailwind CSS
 
@@ -77,6 +79,7 @@ linklang-vite/
 │   │   │   ├── ForgotPassword.tsx
 │   │   │   ├── Privacy.tsx    # Privacy policy
 │   │   │   ├── Terms.tsx      # Terms & conditions
+│   │   │   ├── Support.tsx    # Support centre
 │   │   │   ├── Portal.tsx     # Client dashboard
 │   │   │   ├── NewOrder.tsx   # Create order form
 │   │   │   ├── OrderDetail.tsx # Order communication hub
@@ -175,6 +178,7 @@ This starts both:
 | `documents` | Uploaded files | id, orderId, filename, url, isFinal |
 | `statusLogs` | Audit trail | id, orderId, status, changedBy |
 | `payments` | Payment records | id, quoteId, provider, amount, status |
+| `healthConsentEvents` | Immutable health-data consent audit trail | orderId, clientId, action, channel, language, consentVersion, privacyPolicyVersion, requestId |
 | `rateLimits` | Rate limit tracking | rlKey (PK), count, windowStart |
 
 ### Order Types
@@ -190,6 +194,15 @@ NEW → UNDER_REVIEW → QUOTE_SENT → APPROVED → PAID → IN_PROGRESS → RE
 ↓ (Anytime)
 CANCELLED
 ```
+
+### Health-data Consent
+
+- Translation orders with `context: medical` and public-services orders with `institution: nhs` are health-data orders.
+- The client must actively confirm the server-provided consent text before submitting an NHS request with documents.
+- A client can grant, withdraw, and grant consent again from the order detail view.
+- Consent events preserve the accepted text, language, consent and privacy-policy versions, channel, timestamps, and idempotency request ID.
+- Active consent is required before uploading documents containing health data, sending health-data messages, or advancing a health-data order to `IN_PROGRESS` or `READY`.
+- Administrators can view consent history and record a withdrawal received by email or phone.
 
 ---
 
@@ -221,25 +234,22 @@ Triggered via Resend API:
 
 ## 🌐 Deployment
 
-Deploys to production happen automatically via `.github/workflows/deploy.yml`
-on every push to `main` (applies D1 migrations remotely, then deploys the
-Worker and Pages sites). Manual deploys remain available for local
-troubleshooting:
+Production deploys use the root `wrangler.toml`. The Worker is named
+`linklang-api` and serves `api.linklang.co.uk`; the frontend is deployed to the
+Cloudflare Pages project `linklang`.
 
 ### Frontend (Cloudflare Pages)
 
 ```bash
-cd frontend
-npm run build
-npx wrangler pages deploy dist
+npm run build -w frontend
+npx wrangler pages deploy frontend/dist --project-name=linklang --branch=main
 ```
 
 ### Backend (Cloudflare Workers)
 
 ```bash
-# Run from the repository root — wrangler.toml only defines [env.production],
-# so --env production is required (there is no default environment anymore).
-npx wrangler deploy --env production
+# Run from the repository root.
+npx wrangler deploy --env production --config wrangler.toml
 ```
 
 ### Environment Setup (Production)
@@ -271,7 +281,7 @@ vars = { CORS_ORIGIN = "https://linklang.co.uk" }
 6. **Apply D1 migrations on remote** (also done automatically by CI on every
    push to `main`, but useful to run manually / verify):
 ```bash
-npx wrangler d1 migrations apply linklang-db --remote --env production
+npx wrangler d1 migrations apply linklang-db --remote --env production --config wrangler.toml
 
 # Verify no legacy mixed-case emails remain (must return 0):
 npx wrangler d1 execute linklang-db --remote --env production \
@@ -333,6 +343,12 @@ npx wrangler d1 execute linklang-db --remote --env production \
 - `GET /api/orders/:id` - Get order details
 - `PATCH /api/orders/:id/status` - Update order status (admin only)
 
+### Health-data Consent
+- `GET /api/health-consent/text?language=PL|EN` - Get the current server-controlled consent text (authenticated)
+- `POST /api/orders/:id/health-consent/grant` - Grant consent for the client-owned health-data order
+- `POST /api/orders/:id/health-consent/withdraw` - Withdraw consent for the client-owned health-data order
+- `POST /api/admin/orders/:id/health-consent/withdraw` - Record a withdrawal received by email or phone (admin only)
+
 ### Quotes & Payments
 - `POST /api/quotes` - Create quote (admin only)
 - `POST /api/quotes/:id/accept` - Accept quote
@@ -359,8 +375,9 @@ npx wrangler d1 execute linklang-db --remote --env production \
 
 The platform supports **Polish (PL)** and **English (EN)** with:
 - Language selection stored in localStorage
+- The navigation language switch updates public, authentication, client order, support, and payment-preview views
 - Cookie banner respects language preference
-- All UI text translated in component code
+- Client-facing UI text translated in component code
 - Content object pattern for translations
 
 ---
@@ -370,6 +387,7 @@ The platform supports **Polish (PL)** and **English (EN)** with:
 - ✅ Privacy Policy (`/privacy`)
 - ✅ Terms & Conditions (`/terms`)
 - ✅ Cookie Preferences with granular controls
+- ✅ Versioned consent records for health data
 - ✅ GDPR-compliant data handling
 - ✅ Secure password storage with bcryptjs
 - ✅ Email opt-out support
