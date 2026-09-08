@@ -42,9 +42,14 @@ export default function Login() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const savedLang = localStorage.getItem("linklang_lang") as "PL" | "EN" | null;
-    if (savedLang) setLang(savedLang);
+    const updateLanguage = () => {
+      const savedLang = localStorage.getItem("linklang_lang") as "PL" | "EN" | null;
+      if (savedLang) setLang(savedLang);
+    };
+    updateLanguage();
+    window.addEventListener("languageChange", updateLanguage);
     window.scrollTo(0, 0);
+    return () => window.removeEventListener("languageChange", updateLanguage);
   }, []);
 
   const t = content[lang];

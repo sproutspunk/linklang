@@ -13,6 +13,13 @@ const statusLabels: Record<string, string> = {
   DOWNLOADED: "Pobrane", CANCELLED: "Anulowane",
 };
 
+const healthConsentLabels: Record<string, string> = {
+  NOT_APPLICABLE: "Nie dotyczy",
+  NOT_GIVEN: "Brak zgody",
+  ACTIVE: "Zgoda aktywna",
+  WITHDRAWN: "Zgoda wycofana",
+};
+
 export default function Admin() {
   const [orders, setOrders] = useState<any[]>([]);
   const [filtered, setFiltered] = useState<any[]>([]);
@@ -95,6 +102,7 @@ export default function Admin() {
                 <th className="px-4 py-3 font-medium">Klient</th>
                 <th className="px-4 py-3 font-medium">Typ</th>
                 <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium">Zgoda medyczna</th>
                 <th className="px-4 py-3 font-medium">Wycena</th>
                 <th className="px-4 py-3 font-medium">Termin</th>
                 <th className="px-4 py-3 font-medium">Podgląd</th>
@@ -107,7 +115,7 @@ export default function Admin() {
                   <tr key={o.id} className="hover:bg-slate-50">
                     <td className="px-4 py-3 font-mono text-xs text-slate-500">{String(o.id).padStart(4, "0")}</td>
                     <td className="px-4 py-3">
-                      <div className="font-medium text-slate-900">{o.user?.name || "—"}</div>
+                      <div className="font-medium text-slate-900">{o.user?.name || "-"}</div>
                       <div className="text-xs text-slate-500">{o.user?.email}</div>
                     </td>
                     <td className="px-4 py-3 text-slate-700">{o.type.replace("_", " ")}</td>
@@ -119,6 +127,7 @@ export default function Admin() {
                         ))}
                       </select>
                     </td>
+                    <td className="px-4 py-3 text-xs text-slate-600">{healthConsentLabels[o.healthConsentStatus] || "Nie dotyczy"}</td>
                     <td className="px-4 py-3">
                       {q ? (
                         <span className="font-medium text-slate-900">{formatCurrency(q.amount)}</span>
@@ -129,7 +138,7 @@ export default function Admin() {
                         </button>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-slate-500">{o.deadline ? formatDate(o.deadline) : "—"}</td>
+                    <td className="px-4 py-3 text-slate-500">{o.deadline ? formatDate(o.deadline) : "-"}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <Link to={`/portal/${o.id}`} className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Podgląd">

@@ -4,8 +4,8 @@ import { LogOut, User, Shield } from "lucide-react";
 import { useState, useEffect } from "react";
 
 const navText = {
-  PL: { contact: "Kontakt", admin: "Panel admina", client: "Panel klienta", logout: "Wyloguj", login: "Zaloguj się", register: "Załóż konto" },
-  EN: { contact: "Contact", admin: "Admin Panel", client: "Client Panel", logout: "Logout", login: "Sign in", register: "Sign up" },
+  PL: { contact: "Kontakt", support: "Pomoc", admin: "Panel admina", client: "Panel klienta", logout: "Wyloguj", login: "Zaloguj się", register: "Załóż konto" },
+  EN: { contact: "Contact", support: "Support", admin: "Admin Panel", client: "Client Panel", logout: "Logout", login: "Sign in", register: "Sign up" },
 };
 
 export default function Navbar() {
@@ -35,9 +35,9 @@ export default function Navbar() {
   const t = navText[lang];
 
   return (
-    <nav className="border-b border-slate-200 bg-white">
+    <nav className="border-b border-slate-200 bg-white/90 backdrop-blur-sm">
       {/* Language Switcher */}
-      <div className="flex justify-end gap-2 px-4 py-2 bg-white border-b border-slate-100">
+      <div className="flex justify-end gap-2 border-b border-slate-100 bg-slate-50 px-4 py-2">
         <button
           onClick={() => {
             setLang("PL");
@@ -67,9 +67,9 @@ export default function Navbar() {
           EN
         </button>
       </div>
-      <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
-        <Link to="/" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="h-10 w-10">
-          <img src="/linklang_logo.svg" alt="LinkLang" className="h-10 w-10" />
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+        <Link to="/" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="h-10 w-10 rounded-full ring-1 ring-slate-200 bg-white p-1 shadow-sm">
+          <img src="/linklang_logo.svg" alt="LinkLang" className="h-8 w-8" />
         </Link>
         <div className="flex items-center gap-4">
           <button
@@ -78,7 +78,6 @@ export default function Navbar() {
               if (contactSection) {
                 contactSection.scrollIntoView({ behavior: "smooth" });
               } else {
-                // Jeśli nie jesteśmy na Home page, nawiguj tam i scrolluj
                 navigate("/");
                 setTimeout(() => {
                   const section = document.getElementById("contact-section");
@@ -92,6 +91,9 @@ export default function Navbar() {
           >
             {t.contact}
           </button>
+          <Link to="/support" className="text-sm font-medium text-slate-600 hover:text-brand-600">
+            {t.support}
+          </Link>
           {user ? (
             <>
               {user.role === "ADMIN" && (

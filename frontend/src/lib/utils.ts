@@ -10,7 +10,7 @@ export function formatCurrency(amount: number) {
 }
 
 export function formatDate(date: string | Date | null) {
-  if (!date) return "—";
+  if (!date) return "-";
   return new Date(date).toLocaleDateString("pl-PL", {
     day: "numeric",
     month: "short",

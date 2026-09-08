@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs";
 import { eq, desc, sql } from "drizzle-orm";
 import { z } from "zod";
 import { createDb } from "./db.js";
-import { users, orders, quotes, messages, payments, statusLogs, documents } from "./schema.js";
+import { users, orders, quotes, messages, payments, statusLogs, documents, healthConsentEvents } from "./schema.js";
 import { checkRateLimit } from "./rate-limit.js";
 import { sendWelcomeEmail, sendNewUserNotificationEmail, sendOrderConfirmationEmail, sendQuoteSentEmail, sendStatusChangeEmail, sendPasswordResetEmail, sendContactEmail, sendContactConfirmationEmail } from "./email.js";
 
@@ -38,6 +38,38 @@ const ORDER_STATUSES = [
   "DOWNLOADED",
   "CANCELLED",
 ] as const;
+
+const CONSENT_VERSION = "1.0";
+const PRIVACY_POLICY_VERSION = "2026-09-08";
+const healthConsentText = {
+  PL: "Wyraźnie zgadzam się, aby Miroslaw Potaczek, prowadzący działalność pod marką LinkLang, przetwarzał moje dane o zdrowiu wyłącznie w zakresie niezbędnym do wyceny i realizacji tego zlecenia: tłumaczenia dokumentacji medycznej i dostarczenia mi tłumaczenia lub tłumaczenia ustnego podczas rozmowy z lekarzem.",
+  EN: "I explicitly consent to Miroslaw Potaczek, trading as LinkLang, processing my health information only as necessary to quote for and fulfil this order: translating my medical records and delivering the translation to me, or interpreting during a conversation with a doctor.",
+} as const;
+
+function isHealthOrder(order: { context?: string | null; institution?: string | null }) {
+  return order.context === "medical" || order.institution === "nhs";
+}
+
+async function getLatestHealthConsent(db: any, orderId: number) {
+  return db.select().from(healthConsentEvents)
+    .where(eq(healthConsentEvents.orderId, orderId))
+    .orderBy(desc(healthConsentEvents.recordedAt), desc(healthConsentEvents.id))
+    .get();
+}
+
+function getHealthConsentStatus(order: { context?: string | null }, event: any) {
+  if (!isHealthOrder(order)) return "NOT_APPLICABLE";
+  return event?.action === "GRANTED" ? "ACTIVE" : event?.action === "WITHDRAWN" ? "WITHDRAWN" : "NOT_GIVEN";
+}
+
+async function hasActiveHealthConsent(db: any, orderId: number) {
+  const event = await getLatestHealthConsent(db, orderId);
+  return event?.action === "GRANTED";
+}
+
+async function requireHealthConsent(db: any, order: { id: number; context?: string | null; institution?: string | null }) {
+  return !isHealthOrder(order) || await hasActiveHealthConsent(db, order.id);
+}
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -279,10 +311,19 @@ app.get("/api/orders", authMiddleware, async (c) => {
     .groupBy(messages.orderId)
     .all();
   const countByOrderId = new Map(counts.map((c) => [c.orderId, c.count]));
+  const consentEvents = await db.select().from(healthConsentEvents).all();
+  const latestConsentByOrderId = new Map<number, any>();
+  for (const event of consentEvents) {
+    const current = latestConsentByOrderId.get(event.orderId);
+    if (!current || new Date(event.recordedAt).getTime() > new Date(current.recordedAt).getTime() || (new Date(event.recordedAt).getTime() === new Date(current.recordedAt).getTime() && event.id > current.id)) {
+      latestConsentByOrderId.set(event.orderId, event);
+    }
+  }
 
   const result = list.map((o: any) => ({
     ...o,
     messageCount: countByOrderId.get(o.id) || 0,
+    healthConsentStatus: getHealthConsentStatus(o, latestConsentByOrderId.get(o.id)),
   }));
 
   return c.json(result);
@@ -345,12 +386,132 @@ app.get("/api/orders/:id", authMiddleware, async (c) => {
       documents: true,
       messages: { with: { user: { columns: { name: true } } }, orderBy: [messages.createdAt] },
       statusLogs: { orderBy: [statusLogs.createdAt] },
+      healthConsentEvents: { orderBy: [healthConsentEvents.recordedAt, healthConsentEvents.id] },
       user: { columns: { name: true, email: true, phone: true, company: true } },
     },
   });
   if (!order) return c.json({ error: "Not found" }, 404);
   if (user.role !== "ADMIN" && order.userId !== user.userId) return c.json({ error: "Forbidden" }, 403);
-  return c.json(order);
+  const latestConsent = await getLatestHealthConsent(db, id);
+  return c.json({
+    ...order,
+    healthConsentStatus: getHealthConsentStatus(order, latestConsent),
+  });
+});
+
+app.get("/api/health-consent/text", authMiddleware, async (c) => {
+  const language = c.req.query("language") === "EN" ? "EN" : "PL";
+  return c.json({
+    language,
+    consentText: healthConsentText[language],
+    consentVersion: CONSENT_VERSION,
+    privacyPolicyVersion: PRIVACY_POLICY_VERSION,
+  });
+});
+
+app.post("/api/orders/:id/health-consent/grant", authMiddleware, async (c) => {
+  const db = createDb(c.env.DB);
+  const user = c.get("user");
+  const orderId = parseInt(c.req.param("id"));
+  const parsed = z.object({
+    language: z.enum(["PL", "EN"]),
+    requestId: z.string().uuid(),
+  }).safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ error: "Invalid consent request" }, 400);
+  const order = await db.select().from(orders).where(eq(orders.id, orderId)).get();
+  if (!order) return c.json({ error: "Order not found" }, 404);
+  if (order.userId !== user.userId || user.role !== "CLIENT") return c.json({ error: "Forbidden" }, 403);
+  if (!isHealthOrder(order)) return c.json({ error: "Consent is not applicable" }, 409);
+
+  const existing = await db.select().from(healthConsentEvents).where(eq(healthConsentEvents.requestId, parsed.data.requestId)).get();
+  if (existing) {
+    if (existing.orderId !== orderId || existing.clientId !== user.userId || existing.action !== "GRANTED") return c.json({ error: "Request id already used" }, 409);
+    return c.json(existing);
+  }
+
+  const event = await db.insert(healthConsentEvents).values({
+    orderId,
+    clientId: user.userId,
+    action: "GRANTED",
+    channel: "CLIENT_ACCOUNT",
+    language: parsed.data.language,
+    consentText: healthConsentText[parsed.data.language],
+    consentVersion: CONSENT_VERSION,
+    privacyPolicyVersion: PRIVACY_POLICY_VERSION,
+    adminId: null,
+    requestId: parsed.data.requestId,
+  }).returning().get();
+  return c.json(event, 201);
+});
+
+app.post("/api/orders/:id/health-consent/withdraw", authMiddleware, async (c) => {
+  const db = createDb(c.env.DB);
+  const user = c.get("user");
+  const orderId = parseInt(c.req.param("id"));
+  const parsed = z.object({ requestId: z.string().uuid() }).safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ error: "Invalid withdrawal request" }, 400);
+  const order = await db.select().from(orders).where(eq(orders.id, orderId)).get();
+  if (!order) return c.json({ error: "Order not found" }, 404);
+  if (order.userId !== user.userId || user.role !== "CLIENT") return c.json({ error: "Forbidden" }, 403);
+  if (!isHealthOrder(order)) return c.json({ error: "Consent is not applicable" }, 409);
+
+  const existing = await db.select().from(healthConsentEvents).where(eq(healthConsentEvents.requestId, parsed.data.requestId)).get();
+  if (existing) {
+    if (existing.orderId !== orderId || existing.clientId !== user.userId || existing.action !== "WITHDRAWN") return c.json({ error: "Request id already used" }, 409);
+    return c.json(existing);
+  }
+  const latest = await getLatestHealthConsent(db, orderId);
+  if (!latest || latest.action !== "GRANTED") return c.json({ error: "No active consent" }, 409);
+
+  const event = await db.insert(healthConsentEvents).values({
+    orderId,
+    clientId: user.userId,
+    action: "WITHDRAWN",
+    channel: "CLIENT_ACCOUNT",
+    language: latest.language,
+    consentText: latest.consentText,
+    consentVersion: latest.consentVersion,
+    privacyPolicyVersion: latest.privacyPolicyVersion,
+    adminId: null,
+    requestId: parsed.data.requestId,
+  }).returning().get();
+  return c.json(event, 201);
+});
+
+app.post("/api/admin/orders/:id/health-consent/withdraw", authMiddleware, adminMiddleware, async (c) => {
+  const db = createDb(c.env.DB);
+  const user = c.get("user");
+  const orderId = parseInt(c.req.param("id"));
+  const parsed = z.object({
+    channel: z.enum(["EMAIL", "PHONE"]),
+    receivedAt: z.string().datetime(),
+    requestId: z.string().uuid(),
+  }).safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ error: "Invalid withdrawal request" }, 400);
+  const order = await db.select().from(orders).where(eq(orders.id, orderId)).get();
+  if (!order) return c.json({ error: "Order not found" }, 404);
+  if (!isHealthOrder(order)) return c.json({ error: "Consent is not applicable" }, 409);
+  const existing = await db.select().from(healthConsentEvents).where(eq(healthConsentEvents.requestId, parsed.data.requestId)).get();
+  if (existing) {
+    if (existing.orderId !== orderId || existing.action !== "WITHDRAWN") return c.json({ error: "Request id already used" }, 409);
+    return c.json(existing);
+  }
+  const latest = await getLatestHealthConsent(db, orderId);
+  if (!latest || latest.action !== "GRANTED") return c.json({ error: "No active consent" }, 409);
+  const event = await db.insert(healthConsentEvents).values({
+    orderId,
+    clientId: order.userId,
+    action: "WITHDRAWN",
+    channel: parsed.data.channel,
+    language: latest.language,
+    consentText: latest.consentText,
+    consentVersion: latest.consentVersion,
+    privacyPolicyVersion: latest.privacyPolicyVersion,
+    receivedAt: new Date(parsed.data.receivedAt),
+    adminId: user.userId,
+    requestId: parsed.data.requestId,
+  }).returning().get();
+  return c.json(event, 201);
 });
 
 app.patch("/api/orders/:id/status", authMiddleware, adminMiddleware, async (c) => {
@@ -360,6 +521,12 @@ app.patch("/api/orders/:id/status", authMiddleware, adminMiddleware, async (c) =
   const schema = z.object({ status: z.enum(ORDER_STATUSES) });
   const parsed = schema.safeParse(await c.req.json());
   if (!parsed.success) return c.json({ error: "Invalid status" }, 400);
+
+  const currentOrder = await db.select().from(orders).where(eq(orders.id, id)).get();
+  if (!currentOrder) return c.json({ error: "Not found" }, 404);
+  if (["IN_PROGRESS", "READY"].includes(parsed.data.status) && !(await requireHealthConsent(db, currentOrder))) {
+    return c.json({ error: "Active health consent is required" }, 409);
+  }
 
   const order = await db.update(orders).set({ status: parsed.data.status }).where(eq(orders.id, id)).returning().get();
   if (!order) return c.json({ error: "Not found" }, 404);
@@ -530,9 +697,12 @@ app.post("/api/orders/:id/messages", authMiddleware, async (c) => {
   if (!order) return c.json({ error: "Not found" }, 404);
   if (user.role !== "ADMIN" && order.userId !== user.userId) return c.json({ error: "Forbidden" }, 403);
 
-  const schema = z.object({ content: z.string().min(1).max(2000) });
+  const schema = z.object({ content: z.string().min(1).max(2000), containsHealthData: z.boolean().optional().default(false) });
   const parsed = schema.safeParse(await c.req.json());
   if (!parsed.success) return c.json({ error: "Content required" }, 400);
+  if (parsed.data.containsHealthData && !(await requireHealthConsent(db, order))) {
+    return c.json({ error: "Active health consent is required" }, 409);
+  }
 
   const msg = await db
     .insert(messages)
@@ -554,6 +724,7 @@ app.post("/api/orders/:id/documents", authMiddleware, async (c) => {
     const order = await db.select().from(orders).where(eq(orders.id, orderId)).get();
     if (!order) return c.json({ error: "Order not found" }, 404);
     if (order.userId !== user.userId && user.role !== "ADMIN") return c.json({ error: "Forbidden" }, 403);
+    if (!(await requireHealthConsent(db, order))) return c.json({ error: "Active health consent is required" }, 409);
 
     const bucket = c.env.DOCUMENTS_BUCKET;
     if (!bucket) return c.json({ error: "Document storage not configured" }, 500);
@@ -648,7 +819,7 @@ app.post("/api/forgot-password", authRateLimit, async (c) => {
   try {
     rawBody = await c.req.json();
   } catch {
-    // Malformed/empty JSON body — handled as invalid input.
+    // Malformed/empty JSON body - handled as invalid input.
   }
 
   const schema = z.object({ email: z.string().trim().toLowerCase().email() });

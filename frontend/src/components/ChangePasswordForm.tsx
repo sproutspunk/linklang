@@ -3,13 +3,45 @@ import { Loader2 } from "lucide-react";
 import { apiFetch } from "../lib/api";
 import PasswordInput from "./PasswordInput";
 
-export default function ChangePasswordForm() {
+const content = {
+  PL: {
+    title: "Zmiana hasła",
+    currentPassword: "Stare hasło",
+    newPassword: "Nowe hasło",
+    confirmPassword: "Powtórz nowe hasło",
+    showPassword: "Pokaż hasło",
+    hidePassword: "Ukryj hasło",
+    passwordHint: "Hasło musi mieć min. 8 znaków, dużą literę, małą literę, cyfrę i znak specjalny.",
+    passwordsDoNotMatch: "Nowe hasła nie są takie same",
+    passwordError: "Nowe hasło musi mieć min. 8 znaków, dużą literę, małą literę, cyfrę i znak specjalny (!@#$%^&*)",
+    success: "Hasło zostało zmienione",
+    error: "Nie udało się zmienić hasła",
+    submit: "Zmień hasło",
+  },
+  EN: {
+    title: "Change password",
+    currentPassword: "Current password",
+    newPassword: "New password",
+    confirmPassword: "Repeat new password",
+    showPassword: "Show password",
+    hidePassword: "Hide password",
+    passwordHint: "Password must have at least 8 characters, uppercase, lowercase, number and special character.",
+    passwordsDoNotMatch: "New passwords do not match",
+    passwordError: "New password must have at least 8 characters, uppercase, lowercase, number and special character (!@#$%^&*)",
+    success: "Password has been changed",
+    error: "Unable to change password",
+    submit: "Change password",
+  },
+};
+
+export default function ChangePasswordForm({ lang = "PL" }: { lang?: "PL" | "EN" }) {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const t = content[lang];
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -17,13 +49,13 @@ export default function ChangePasswordForm() {
     setSuccess("");
 
     if (newPassword !== confirmPassword) {
-      setError("Nowe hasła nie są takie same");
+      setError(t.passwordsDoNotMatch);
       return;
     }
 
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
     if (!passwordRegex.test(newPassword)) {
-      setError("Nowe hasło musi mieć min. 8 znaków, dużą literę, małą literę, cyfrę i znak specjalny (!@#$%^&*)");
+      setError(t.passwordError);
       return;
     }
 
@@ -36,9 +68,9 @@ export default function ChangePasswordForm() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      setSuccess("Hasło zostało zmienione");
+      setSuccess(t.success);
     } catch (err: any) {
-      setError(err.message || "Nie udało się zmienić hasła");
+      setError(err.message || t.error);
     } finally {
       setSubmitting(false);
     }
@@ -46,40 +78,40 @@ export default function ChangePasswordForm() {
 
   return (
     <section className="mt-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Zmiana hasła</h2>
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t.title}</h2>
       <form onSubmit={handleSubmit} className="mt-4 grid gap-4 sm:grid-cols-3">
         <PasswordInput
           id="current-password"
-          label="Stare hasło"
+          label={t.currentPassword}
           value={currentPassword}
           onChange={setCurrentPassword}
-          showLabel="Pokaż hasło"
-          hideLabel="Ukryj hasło"
+          showLabel={t.showPassword}
+          hideLabel={t.hidePassword}
           required
         />
         <PasswordInput
           id="account-new-password"
-          label="Nowe hasło"
+          label={t.newPassword}
           value={newPassword}
           onChange={setNewPassword}
-          showLabel="Pokaż hasło"
-          hideLabel="Ukryj hasło"
+          showLabel={t.showPassword}
+          hideLabel={t.hidePassword}
           required
           minLength={8}
         />
         <PasswordInput
           id="account-confirm-password"
-          label="Powtórz nowe hasło"
+          label={t.confirmPassword}
           value={confirmPassword}
           onChange={setConfirmPassword}
-          showLabel="Pokaż hasło"
-          hideLabel="Ukryj hasło"
+          showLabel={t.showPassword}
+          hideLabel={t.hidePassword}
           required
           minLength={8}
         />
         <div className="sm:col-span-3">
           <p className="text-xs text-slate-500">
-            Hasło musi mieć min. 8 znaków, dużą literę, małą literę, cyfrę i znak specjalny.
+            {t.passwordHint}
           </p>
           {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
           {success && <p className="mt-2 text-sm text-green-600">{success}</p>}
@@ -88,7 +120,7 @@ export default function ChangePasswordForm() {
             disabled={submitting}
             className="mt-4 inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
           >
-            {submitting && <Loader2 className="h-4 w-4 animate-spin" />} Zmień hasło
+            {submitting && <Loader2 className="h-4 w-4 animate-spin" />} {t.submit}
           </button>
         </div>
       </form>

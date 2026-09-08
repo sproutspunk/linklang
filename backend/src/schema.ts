@@ -41,6 +41,29 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
   documents: many(documents),
   messages: many(messages),
   statusLogs: many(statusLogs),
+  healthConsentEvents: many(healthConsentEvents),
+}));
+
+export const healthConsentEvents = sqliteTable("health_consent_events", {
+  id: integer("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
+  orderId: integer("order_id").notNull().references(() => orders.id),
+  clientId: integer("client_id").notNull().references(() => users.id),
+  action: text("action", { enum: ["GRANTED", "WITHDRAWN"] }).notNull(),
+  channel: text("channel", { enum: ["CLIENT_ACCOUNT", "EMAIL", "PHONE"] }).notNull(),
+  language: text("language", { enum: ["PL", "EN"] }).notNull(),
+  consentText: text("consent_text"),
+  consentVersion: text("consent_version").notNull(),
+  privacyPolicyVersion: text("privacy_policy_version").notNull(),
+  receivedAt: integer("received_at", { mode: "timestamp" }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  recordedAt: integer("recorded_at", { mode: "timestamp" }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  adminId: integer("admin_id").references(() => users.id),
+  requestId: text("request_id").notNull().unique(),
+});
+
+export const healthConsentEventsRelations = relations(healthConsentEvents, ({ one }) => ({
+  order: one(orders, { fields: [healthConsentEvents.orderId], references: [orders.id] }),
+  client: one(users, { fields: [healthConsentEvents.clientId], references: [users.id] }),
+  admin: one(users, { fields: [healthConsentEvents.adminId], references: [users.id] }),
 }));
 
 export const documents = sqliteTable("documents", {

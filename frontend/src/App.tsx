@@ -7,6 +7,7 @@ import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
+import Support from "./pages/Support";
 import Portal from "./pages/Portal";
 import NewOrder from "./pages/NewOrder";
 import OrderDetail from "./pages/OrderDetail";
@@ -29,6 +30,7 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
+        <Route path="/support" element={<Support />} />
         <Route path="/payment-preview" element={<PaymentPreview />} />
         <Route path="/portal" element={<ProtectedRoute><Portal /></ProtectedRoute>} />
         <Route path="/portal/new" element={<ProtectedRoute><NewOrder /></ProtectedRoute>} />

@@ -2,9 +2,64 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --brand-50: #eff6ff;
+  --brand-100: #dbeafe;
+  --brand-200: #bfdbfe;
+  --brand-500: #3b82f6;
+  --brand-600: #2563eb;
+  --brand-700: #1d4ed8;
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --surface-soft: #f8fafc;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --muted: #475569;
+}
+
 @layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply text-slate-900 antialiased;
-    background-color: #f7f7f5;
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    color: var(--text);
+  }
+
+  #root {
+    min-height: 100vh;
+    background: transparent;
+  }
+
+  a,
+  button,
+  input,
+  textarea,
+  select {
+    transition: all 0.2s ease;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  img {
+    max-width: 100%;
+    display: block;
+  }
+}
+
+@layer components {
+  .card-shell {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 1rem;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
   }
 }
