@@ -1,3 +1,4 @@
+import { applyAnalyticsConsent } from "../lib/analytics";
 import { useLanguage } from "../lib/language";
 import { useState, useEffect } from "react";
 import { X, Settings } from "lucide-react";
@@ -75,9 +76,10 @@ export default function CookieBanner() {
       marketing: true,
     }));
     
+    applyAnalyticsConsent(true);
+
     // GA4 tracking
     if (window.gtag) {
-      window.gtag('event', 'page_view');
       window.gtag('event', 'cookie_consent', {
         cookie_type: 'all_accepted'
       });
@@ -93,12 +95,14 @@ export default function CookieBanner() {
       analytics: false,
       marketing: false,
     }));
+    applyAnalyticsConsent(false);
     setIsVisible(false);
   }
 
   function handleSavePreferences() {
     localStorage.setItem("linklang_cookies_accepted", "true");
     localStorage.setItem("linklang_cookie_preferences", JSON.stringify(preferences));
+    applyAnalyticsConsent(preferences.analytics);
     setIsVisible(false);
     setShowPreferences(false);
   }
