@@ -1,3 +1,6 @@
+import { localizeMessage } from "../lib/messages";
+import { serviceLabels, contextLabels, institutionLabels } from "../lib/labels";
+import { useLanguage } from "../lib/language";
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { apiFetch, apiDownload } from "../lib/api";
@@ -12,6 +15,7 @@ const statusFlow = ["NEW", "UNDER_REVIEW", "QUOTE_SENT", "APPROVED", "PAID", "IN
 const statusLabels: Record<string, { PL: string; EN: string }> = {
   NEW: { PL: "Przesłane", EN: "Submitted" }, UNDER_REVIEW: { PL: "Weryfikacja", EN: "Under review" }, QUOTE_SENT: { PL: "Wycena wysłana", EN: "Quote sent" },
   APPROVED: { PL: "Zaakceptowane", EN: "Approved" }, PAID: { PL: "Opłacone", EN: "Paid" }, IN_PROGRESS: { PL: "W realizacji", EN: "In progress" },
+  CANCELLED: { PL: "Anulowane", EN: "Cancelled" },
   READY: { PL: "Gotowe", EN: "Ready" }, DOWNLOADED: { PL: "Pobrane", EN: "Downloaded" },
 };
 
@@ -37,7 +41,7 @@ export default function OrderDetail() {
   const [consentError, setConsentError] = useState("");
   const [withdrawalChannel, setWithdrawalChannel] = useState<"EMAIL" | "PHONE">("EMAIL");
   const [withdrawalReceivedAt, setWithdrawalReceivedAt] = useState("");
-  const [lang, setLang] = useState<"PL" | "EN">("PL");
+  const { lang } = useLanguage();
 
   const copy = lang === "PL"
     ? {
@@ -58,17 +62,13 @@ export default function OrderDetail() {
   }, [id]);
 
   useEffect(() => {
-    const updateLanguage = () => setLang(localStorage.getItem("linklang_lang") === "EN" ? "EN" : "PL");
-    updateLanguage();
-    window.addEventListener("languageChange", updateLanguage);
-    return () => window.removeEventListener("languageChange", updateLanguage);
-  }, []);
-
-  useEffect(() => {
     if (order?.context !== "medical" || user?.role !== "CLIENT") return;
+    let active = true;
+    setConsentText("");
     apiFetch(`/api/health-consent/text?language=${lang}`)
-      .then((consent) => setConsentText(consent.consentText))
-      .catch(() => setConsentText(""));
+      .then((consent) => { if (active) setConsentText(consent.consentText); })
+      .catch(() => { if (active) setConsentText(""); });
+    return () => { active = false; };
   }, [lang, order?.context, user?.role]);
 
   async function sendMessage(e: React.FormEvent) {
@@ -170,7 +170,7 @@ export default function OrderDetail() {
 
       <div className="mt-6 flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">{order.type.replace("_", " ")}</h1>
+          <h1 className="text-xl font-bold text-slate-900">{serviceLabels[order.type]?.[lang] || order.type}</h1>
           <p className="mt-1 text-sm text-slate-500">{formatDate(order.createdAt)}</p>
         </div>
         <span className="rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-700">{statusLabels[order.status]?.[lang] || order.status}</span>
@@ -200,8 +200,8 @@ export default function OrderDetail() {
           {order.deadline && <div><dt className="text-slate-500">{copy.deadline}</dt><dd className="font-medium">{formatDate(order.deadline)}</dd></div>}
           {order.location && <div><dt className="text-slate-500">{copy.location}</dt><dd className="font-medium">{order.location}</dd></div>}
           {order.durationMin && <div><dt className="text-slate-500">{copy.duration}</dt><dd className="font-medium">{order.durationMin} min</dd></div>}
-          {order.institution && <div><dt className="text-slate-500">{copy.institution}</dt><dd className="font-medium">{order.institution}</dd></div>}
-          {order.context && <div><dt className="text-slate-500">{copy.context}</dt><dd className="font-medium">{order.context}</dd></div>}
+          {order.institution && <div><dt className="text-slate-500">{copy.institution}</dt><dd className="font-medium">{institutionLabels[order.institution] || order.institution}</dd></div>}
+          {order.context && <div><dt className="text-slate-500">{copy.context}</dt><dd className="font-medium">{contextLabels[order.context]?.[lang] || order.context}</dd></div>}
         </dl>
         {order.notes && <div className="mt-4"><dt className="text-sm text-slate-500">{copy.notes}</dt><dd className="mt-1 text-sm text-slate-800">{order.notes}</dd></div>}
       </div>
@@ -227,7 +227,7 @@ export default function OrderDetail() {
               <button type="button" onClick={grantConsent} disabled={!consentChecked || consentSaving} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50">{copy.give}</button>
             </div>
           )}
-          {consentError && <p className="mt-3 text-sm text-red-600">{consentError}</p>}
+          {consentError && <p className="mt-3 text-sm text-red-600">{localizeMessage(consentError, lang)}</p>}
         </section>
       )}
 
@@ -239,7 +239,7 @@ export default function OrderDetail() {
             {order.healthConsentEvents?.map((event: any) => (
               <div key={event.id} className="border-l-2 border-slate-200 pl-3">
                 <p className="font-medium text-slate-900">{event.action === "GRANTED" ? copy.give : copy.withdraw}</p>
-                <p>{copy.received}: {formatDate(event.receivedAt)} · {copy.recorded}: {formatDate(event.recordedAt)} · {copy.channel}: {event.channel}</p>
+                <p>{copy.received}: {formatDate(event.receivedAt)} · {copy.recorded}: {formatDate(event.recordedAt)} · {copy.channel}: {event.channel === "EMAIL" ? copy.email : event.channel === "PHONE" ? copy.phone : (lang === "PL" ? "Panel klienta" : "Client account")}</p>
                 <p>{copy.language}: {event.language} · {copy.consentVersion}: {event.consentVersion} · {copy.privacyPolicy}: {event.privacyPolicyVersion}</p>
                 <p className="mt-1 text-slate-600">{event.consentText}</p>
               </div>
@@ -252,7 +252,7 @@ export default function OrderDetail() {
               <button type="button" onClick={recordAdminWithdrawal} disabled={!withdrawalReceivedAt || consentSaving} className="rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50">{copy.recordWithdrawal}</button>
             </div>
           )}
-          {consentError && <p className="mt-3 text-sm text-red-600">{consentError}</p>}
+          {consentError && <p className="mt-3 text-sm text-red-600">{localizeMessage(consentError, lang)}</p>}
         </section>
       )}
 
@@ -285,7 +285,7 @@ export default function OrderDetail() {
               )
             )}
           </div>
-          {paymentError && <p className="mt-3 text-sm text-red-600">{paymentError}</p>}
+          {paymentError && <p className="mt-3 text-sm text-red-600">{localizeMessage(paymentError, lang)}</p>}
         </div>
       )}
 

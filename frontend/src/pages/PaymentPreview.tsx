@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useLanguage } from "../lib/language";
 import { CreditCard, FileText } from "lucide-react";
 
 const content = {
@@ -7,14 +7,7 @@ const content = {
 };
 
 export default function PaymentPreview() {
-  const [lang, setLang] = useState<"PL" | "EN">("PL");
-
-  useEffect(() => {
-    const updateLanguage = () => setLang(localStorage.getItem("linklang_lang") === "EN" ? "EN" : "PL");
-    updateLanguage();
-    window.addEventListener("languageChange", updateLanguage);
-    return () => window.removeEventListener("languageChange", updateLanguage);
-  }, []);
+  const { lang } = useLanguage();
 
   const t = content[lang];
 

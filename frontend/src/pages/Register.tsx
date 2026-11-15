@@ -1,3 +1,5 @@
+import { localizeMessage } from "../lib/messages";
+import { useLanguage } from "../lib/language";
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiFetch } from "../lib/api";
@@ -41,7 +43,7 @@ const content = {
 
 export default function Register() {
   const navigate = useNavigate();
-  const [lang, setLang] = useState<"PL" | "EN">("PL");
+  const { lang } = useLanguage();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -50,19 +52,10 @@ export default function Register() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const updateLanguage = () => {
-      const savedLang = localStorage.getItem("linklang_lang") as "PL" | "EN" | null;
-      if (savedLang) setLang(savedLang);
-    };
-    updateLanguage();
-    window.addEventListener("languageChange", updateLanguage);
     window.scrollTo(0, 0);
-    return () => window.removeEventListener("languageChange", updateLanguage);
   }, []);
 
   const t = content[lang];
-
-
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -129,7 +122,7 @@ export default function Register() {
             />
             <p className="mt-1 text-xs text-slate-500">{t.passwordHint}</p>
           </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-red-600">{localizeMessage(error, lang, content)}</p>}
           <button type="submit" disabled={loading}
             className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50">
             {loading && <Loader2 className="h-4 w-4 animate-spin" />} {t.register}

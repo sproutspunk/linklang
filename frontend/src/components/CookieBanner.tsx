@@ -1,3 +1,4 @@
+import { useLanguage } from "../lib/language";
 import { useState, useEffect } from "react";
 import { X, Settings } from "lucide-react";
 
@@ -41,7 +42,7 @@ const translations = {
 export default function CookieBanner() {
   const [isVisible, setIsVisible] = useState(false);
   const [showPreferences, setShowPreferences] = useState(false);
-  const [lang, setLang] = useState<"PL" | "EN">("PL");
+  const { lang } = useLanguage();
   const t = translations[lang];
   const [preferences, setPreferences] = useState({
     necessary: true,
@@ -50,8 +51,6 @@ export default function CookieBanner() {
   });
 
   useEffect(() => {
-    const savedLang = localStorage.getItem("linklang_lang") as "PL" | "EN" | null;
-    if (savedLang) setLang(savedLang);
     
     const cookiesAccepted = localStorage.getItem("linklang_cookies_accepted");
     if (!cookiesAccepted) {

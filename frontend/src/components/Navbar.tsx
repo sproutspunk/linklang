@@ -1,7 +1,7 @@
+import { useLanguage } from "../lib/language";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/store";
 import { LogOut, User, Shield } from "lucide-react";
-import { useState, useEffect } from "react";
 
 const navText = {
   PL: { contact: "Kontakt", support: "Pomoc", admin: "Panel admina", client: "Panel klienta", logout: "Wyloguj", login: "Zaloguj się", register: "Załóż konto" },
@@ -11,26 +11,7 @@ const navText = {
 export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [lang, setLang] = useState<"PL" | "EN">("PL");
-
-  useEffect(() => {
-    const savedLang = localStorage.getItem("linklang_lang") as "PL" | "EN" | null;
-    if (savedLang) setLang(savedLang);
-
-    // Słuchaj zmian języka
-    const handleStorageChange = () => {
-      const newLang = localStorage.getItem("linklang_lang") as "PL" | "EN" | null;
-      if (newLang) setLang(newLang);
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-    window.addEventListener("languageChange", handleStorageChange);
-    
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("languageChange", handleStorageChange);
-    };
-  }, []);
+  const { lang, setLang } = useLanguage();
 
   const t = navText[lang];
 
@@ -41,8 +22,6 @@ export default function Navbar() {
         <button
           onClick={() => {
             setLang("PL");
-            localStorage.setItem("linklang_lang", "PL");
-            window.dispatchEvent(new Event("languageChange"));
           }}
           className={`px-3 py-1 rounded text-sm font-medium transition ${
             lang === "PL"
@@ -55,8 +34,6 @@ export default function Navbar() {
         <button
           onClick={() => {
             setLang("EN");
-            localStorage.setItem("linklang_lang", "EN");
-            window.dispatchEvent(new Event("languageChange"));
           }}
           className={`px-3 py-1 rounded text-sm font-medium transition ${
             lang === "EN"

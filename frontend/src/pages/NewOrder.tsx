@@ -1,3 +1,5 @@
+import { localizeMessage } from "../lib/messages";
+import { useLanguage } from "../lib/language";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Link } from "react-router-dom";
@@ -23,18 +25,11 @@ export default function NewOrder() {
   const [type, setType] = useState(searchParams.get("type")?.toUpperCase() || "TRANSLATION");
   const [submitting, setSubmitting] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
-  const [lang, setLang] = useState<"PL" | "EN">("PL");
+  const { lang } = useLanguage();
   const [institution, setInstitution] = useState("");
   const [consentText, setConsentText] = useState("");
   const [consentChecked, setConsentChecked] = useState(false);
   const [consentError, setConsentError] = useState("");
-
-  useEffect(() => {
-    const updateLanguage = () => setLang((localStorage.getItem("linklang_lang") as "PL" | "EN") || "PL");
-    updateLanguage();
-    window.addEventListener("languageChange", updateLanguage);
-    return () => window.removeEventListener("languageChange", updateLanguage);
-  }, []);
 
   const t = content[lang];
   const types = Object.entries(t.types).map(([value, label]) => ({ value, label }));
@@ -46,9 +41,13 @@ export default function NewOrder() {
       setConsentError("");
       return;
     }
+    let active = true;
+    setConsentText("");
+    setConsentError("");
     apiFetch(`/api/health-consent/text?language=${lang}`)
-      .then((data) => setConsentText(data.consentText))
-      .catch(() => setConsentError(t.consentLoadError));
+      .then((data) => { if (active) setConsentText(data.consentText); })
+      .catch(() => { if (active) setConsentError(t.consentLoadError); });
+    return () => { active = false; };
   }, [requiresHealthConsent, lang]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -120,13 +119,13 @@ export default function NewOrder() {
             <label className="block text-sm font-medium text-slate-700">{t.sourceLanguage}</label>
             <select name="sourceLang" defaultValue="PL" className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
               <option value="PL">{lang === "PL" ? "Polski" : "Polish"}</option>
-              <option value="EN">English</option>
+              <option value="EN">{lang === "PL" ? "Angielski" : "English"}</option>
             </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700">{t.targetLanguage}</label>
             <select name="targetLang" defaultValue="EN" className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
-              <option value="EN">English</option>
+              <option value="EN">{lang === "PL" ? "Angielski" : "English"}</option>
               <option value="PL">{lang === "PL" ? "Polski" : "Polish"}</option>
             </select>
           </div>
@@ -174,7 +173,7 @@ export default function NewOrder() {
                     <span>{consentText}</span>
                   </label>
                 )}
-                {consentError && <p className="mt-3 text-sm text-red-600">{consentError}</p>}
+                {consentError && <p className="mt-3 text-sm text-red-600">{localizeMessage(consentError, lang, content)}</p>}
               </div>
             )}
           </div>

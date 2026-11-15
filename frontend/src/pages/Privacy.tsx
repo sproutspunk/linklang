@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useLanguage } from "../lib/language";
+import { useEffect } from "react";
 
 const content = {
   PL: {
@@ -198,23 +199,10 @@ const content = {
 };
 
 export default function Privacy() {
-  const [lang, setLang] = useState<"PL" | "EN">("PL");
+  const { lang, setLang } = useLanguage();
 
   useEffect(() => {
-    const savedLang = localStorage.getItem("linklang_lang") as "PL" | "EN" | null;
-    if (savedLang === "PL" || savedLang === "EN") setLang(savedLang);
-
-    const handleLanguageChange = () => {
-      const nextLang = localStorage.getItem("linklang_lang") as "PL" | "EN" | null;
-      if (nextLang === "PL" || nextLang === "EN") setLang(nextLang);
-    };
-
-    window.addEventListener("languageChange", handleLanguageChange);
     window.scrollTo(0, 0);
-
-    return () => {
-      window.removeEventListener("languageChange", handleLanguageChange);
-    };
   }, []);
 
   useEffect(() => {
@@ -236,8 +224,6 @@ export default function Privacy() {
               <button
                 onClick={() => {
                   setLang("PL");
-                  localStorage.setItem("linklang_lang", "PL");
-                  window.dispatchEvent(new Event("languageChange"));
                 }}
                 className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
                   lang === "PL" ? "bg-brand-600 text-white shadow-sm" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
@@ -248,8 +234,6 @@ export default function Privacy() {
               <button
                 onClick={() => {
                   setLang("EN");
-                  localStorage.setItem("linklang_lang", "EN");
-                  window.dispatchEvent(new Event("languageChange"));
                 }}
                 className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
                   lang === "EN" ? "bg-brand-600 text-white shadow-sm" : "bg-slate-100 text-slate-700 hover:bg-slate-200"

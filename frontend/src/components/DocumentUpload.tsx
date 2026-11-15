@@ -1,3 +1,4 @@
+import { localizeMessage } from "../lib/messages";
 import { useState, useRef } from "react";
 import { apiFetch } from "../lib/api";
 import { Loader2, Upload, File as FileIcon, X } from "lucide-react";
@@ -46,7 +47,7 @@ export default function DocumentUpload({ orderId, onUploaded, maxFiles = 5, lang
       setFiles([]);
       onUploaded();
     } catch (err: any) {
-      alert(err.message || t.error);
+      alert(localizeMessage(err.message || t.error, lang, content));
     } finally {
       setUploading(false);
     }

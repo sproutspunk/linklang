@@ -1,3 +1,5 @@
+import { localizeMessage } from "../lib/messages";
+import { useLanguage } from "../lib/language";
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/store";
@@ -35,21 +37,14 @@ const content = {
 export default function Login() {
   const navigate = useNavigate();
   const { setAuth } = useAuth();
-  const [lang, setLang] = useState<"PL" | "EN">("PL");
+  const { lang } = useLanguage();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const updateLanguage = () => {
-      const savedLang = localStorage.getItem("linklang_lang") as "PL" | "EN" | null;
-      if (savedLang) setLang(savedLang);
-    };
-    updateLanguage();
-    window.addEventListener("languageChange", updateLanguage);
     window.scrollTo(0, 0);
-    return () => window.removeEventListener("languageChange", updateLanguage);
   }, []);
 
   const t = content[lang];
@@ -92,7 +87,7 @@ export default function Login() {
             hideLabel={t.hidePassword}
             required
           />
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-red-600">{localizeMessage(error, lang, content)}</p>}
           <button type="submit" disabled={loading}
             className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50">
             {loading && <Loader2 className="h-4 w-4 animate-spin" />} {t.signIn}

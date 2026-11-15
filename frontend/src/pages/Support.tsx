@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useLanguage } from "../lib/language";
+import { useEffect } from "react";
 import { Mail, Phone, ShieldCheck, MessageCircleQuestion } from "lucide-react";
 
 const content = {
@@ -267,23 +268,10 @@ const content = {
 };
 
 export default function Support() {
-  const [lang, setLang] = useState<"PL" | "EN">("PL");
+  const { lang, setLang } = useLanguage();
 
   useEffect(() => {
-    const savedLang = localStorage.getItem("linklang_lang") as "PL" | "EN" | null;
-    if (savedLang === "PL" || savedLang === "EN") setLang(savedLang);
-
-    const handleLanguageChange = () => {
-      const nextLang = localStorage.getItem("linklang_lang") as "PL" | "EN" | null;
-      if (nextLang === "PL" || nextLang === "EN") setLang(nextLang);
-    };
-
-    window.addEventListener("languageChange", handleLanguageChange);
     window.scrollTo(0, 0);
-
-    return () => {
-      window.removeEventListener("languageChange", handleLanguageChange);
-    };
   }, []);
 
   useEffect(() => {
@@ -307,8 +295,6 @@ export default function Support() {
             <button
               onClick={() => {
                 setLang("PL");
-                localStorage.setItem("linklang_lang", "PL");
-                window.dispatchEvent(new Event("languageChange"));
               }}
               className={`rounded px-3 py-1.5 text-sm font-medium transition ${
                 lang === "PL" ? "bg-brand-600 text-white" : "bg-white text-slate-700 ring-1 ring-slate-200 hover:ring-brand-300"
@@ -319,8 +305,6 @@ export default function Support() {
             <button
               onClick={() => {
                 setLang("EN");
-                localStorage.setItem("linklang_lang", "EN");
-                window.dispatchEvent(new Event("languageChange"));
               }}
               className={`rounded px-3 py-1.5 text-sm font-medium transition ${
                 lang === "EN" ? "bg-brand-600 text-white" : "bg-white text-slate-700 ring-1 ring-slate-200 hover:ring-brand-300"

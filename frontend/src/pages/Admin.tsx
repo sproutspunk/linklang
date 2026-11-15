@@ -1,3 +1,5 @@
+import { useLanguage } from "../lib/language";
+import { serviceLabels } from "../lib/labels";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiFetch } from "../lib/api";
@@ -7,20 +9,63 @@ import { Loader2, ExternalLink, PoundSterling, MessageSquare } from "lucide-reac
 
 const statuses = ["ALL", "NEW", "UNDER_REVIEW", "QUOTE_SENT", "APPROVED", "PAID", "IN_PROGRESS", "READY", "DOWNLOADED", "CANCELLED"];
 
-const statusLabels: Record<string, string> = {
+const polishStatusLabels: Record<string, string> = {
   ALL: "Wszystkie", NEW: "Przesłane", UNDER_REVIEW: "Weryfikacja", QUOTE_SENT: "Wycena wysłana",
   APPROVED: "Zaakceptowane", PAID: "Opłacone", IN_PROGRESS: "W realizacji", READY: "Gotowe",
   DOWNLOADED: "Pobrane", CANCELLED: "Anulowane",
 };
 
-const healthConsentLabels: Record<string, string> = {
+const polishHealthConsentLabels: Record<string, string> = {
   NOT_APPLICABLE: "Nie dotyczy",
   NOT_GIVEN: "Brak zgody",
   ACTIVE: "Zgoda aktywna",
   WITHDRAWN: "Zgoda wycofana",
 };
 
+const content = {
+  "PL": {
+    "title": "Panel administracyjny",
+    "revenue": "Przychód",
+    "orders": "Zlecenia",
+    "client": "Klient",
+    "type": "Typ",
+    "status": "Status",
+    "consent": "Zgoda medyczna",
+    "quote": "Wycena",
+    "deadline": "Termin",
+    "preview": "Podgląd",
+    "empty": "Brak zleceń w tym statusie.",
+    "sendQuote": "Wyślij wycenę",
+    "amount": "Kwota (£)",
+    "notes": "Uwagi",
+    "cancel": "Anuluj",
+    "notesPlaceholder": "Szczegóły wyceny..."
+  },
+  "EN": {
+    "title": "Admin panel",
+    "revenue": "Revenue",
+    "orders": "Orders",
+    "client": "Client",
+    "type": "Type",
+    "status": "Status",
+    "consent": "Health consent",
+    "quote": "Quote",
+    "deadline": "Deadline",
+    "preview": "Preview",
+    "empty": "No orders with this status.",
+    "sendQuote": "Send quote",
+    "amount": "Amount (£)",
+    "notes": "Notes",
+    "cancel": "Cancel",
+    "notesPlaceholder": "Quote details..."
+  }
+};
+
 export default function Admin() {
+  const { lang } = useLanguage();
+  const t = content[lang];
+  const statusLabels: Record<string, string> = lang === "PL" ? polishStatusLabels : { ALL: "All", NEW: "Submitted", UNDER_REVIEW: "Under review", QUOTE_SENT: "Quote sent", APPROVED: "Approved", PAID: "Paid", IN_PROGRESS: "In progress", READY: "Ready", DOWNLOADED: "Downloaded", CANCELLED: "Cancelled" };
+  const healthConsentLabels: Record<string, string> = lang === "PL" ? polishHealthConsentLabels : { NOT_APPLICABLE: "Not applicable", NOT_GIVEN: "Not given", ACTIVE: "Active", WITHDRAWN: "Withdrawn" };
   const [orders, setOrders] = useState<any[]>([]);
   const [filtered, setFiltered] = useState<any[]>([]);
   const [filter, setFilter] = useState("ALL");
@@ -65,22 +110,22 @@ export default function Admin() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-slate-900">Panel administracyjny</h1>
+        <h1 className="text-2xl font-bold text-slate-900">{t.title}</h1>
         {summary && (
           <div className="flex items-center gap-4">
             <div className="rounded-lg bg-emerald-50 px-4 py-2 text-sm">
-              <span className="text-slate-500">Przychód</span>
+              <span className="text-slate-500">{t.revenue}</span>
               <span className="ml-2 font-bold text-emerald-700">{formatCurrency(summary.revenue)}</span>
             </div>
             <div className="rounded-lg bg-brand-50 px-4 py-2 text-sm">
-              <span className="text-slate-500">Zlecenia</span>
+              <span className="text-slate-500">{t.orders}</span>
               <span className="ml-2 font-bold text-brand-700">{summary.totalOrders}</span>
             </div>
           </div>
         )}
       </div>
 
-      <ChangePasswordForm />
+      <ChangePasswordForm lang={lang} />
 
       <div className="mt-6 flex flex-wrap gap-2">
         {statuses.map((s) => (
@@ -99,13 +144,13 @@ export default function Admin() {
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
                 <th className="px-4 py-3 font-medium">ID</th>
-                <th className="px-4 py-3 font-medium">Klient</th>
-                <th className="px-4 py-3 font-medium">Typ</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Zgoda medyczna</th>
-                <th className="px-4 py-3 font-medium">Wycena</th>
-                <th className="px-4 py-3 font-medium">Termin</th>
-                <th className="px-4 py-3 font-medium">Podgląd</th>
+                <th className="px-4 py-3 font-medium">{t.client}</th>
+                <th className="px-4 py-3 font-medium">{t.type}</th>
+                <th className="px-4 py-3 font-medium">{t.status}</th>
+                <th className="px-4 py-3 font-medium">{t.consent}</th>
+                <th className="px-4 py-3 font-medium">{t.quote}</th>
+                <th className="px-4 py-3 font-medium">{t.deadline}</th>
+                <th className="px-4 py-3 font-medium">{t.preview}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -118,7 +163,7 @@ export default function Admin() {
                       <div className="font-medium text-slate-900">{o.user?.name || "-"}</div>
                       <div className="text-xs text-slate-500">{o.user?.email}</div>
                     </td>
-                    <td className="px-4 py-3 text-slate-700">{o.type.replace("_", " ")}</td>
+                    <td className="px-4 py-3 text-slate-700">{serviceLabels[o.type]?.[lang] || o.type}</td>
                     <td className="px-4 py-3">
                       <select value={o.status} onChange={(e) => updateStatus(o.id, e.target.value)}
                         className="rounded border border-slate-200 bg-white px-2 py-1 text-xs">
@@ -127,21 +172,21 @@ export default function Admin() {
                         ))}
                       </select>
                     </td>
-                    <td className="px-4 py-3 text-xs text-slate-600">{healthConsentLabels[o.healthConsentStatus] || "Nie dotyczy"}</td>
+                    <td className="px-4 py-3 text-xs text-slate-600">{healthConsentLabels[o.healthConsentStatus] || healthConsentLabels.NOT_APPLICABLE}</td>
                     <td className="px-4 py-3">
                       {q ? (
                         <span className="font-medium text-slate-900">{formatCurrency(q.amount)}</span>
                       ) : (
                         <button onClick={() => setQuoteModal(o.id)}
                           className="inline-flex items-center gap-1 rounded bg-brand-50 px-2 py-1 text-xs font-medium text-brand-700 hover:bg-brand-100">
-                          <PoundSterling className="h-3 w-3" /> Wycena
+                          <PoundSterling className="h-3 w-3" /> {t.quote}
                         </button>
                       )}
                     </td>
                     <td className="px-4 py-3 text-slate-500">{o.deadline ? formatDate(o.deadline) : "-"}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <Link to={`/portal/${o.id}`} className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Podgląd">
+                        <Link to={`/portal/${o.id}`} className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700" title={t.preview}>
                           <ExternalLink className="h-4 w-4" />
                         </Link>
                         {o.messageCount > 0 && (
@@ -156,32 +201,32 @@ export default function Admin() {
               })}
             </tbody>
           </table>
-          {filtered.length === 0 && <p className="py-10 text-center text-sm text-slate-400">Brak zleceń w tym statusie.</p>}
+          {filtered.length === 0 && <p className="py-10 text-center text-sm text-slate-400">{t.empty}</p>}
         </div>
       )}
 
       {quoteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-            <h3 className="text-lg font-bold text-slate-900">Wyślij wycenę</h3>
+            <h3 className="text-lg font-bold text-slate-900">{t.sendQuote}</h3>
             <div className="mt-4 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700">Kwota (£)</label>
+                <label className="block text-sm font-medium text-slate-700">{t.amount}</label>
                 <input type="number" step="0.01" value={quoteAmount} onChange={(e) => setQuoteAmount(e.target.value)}
                   className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="150.00" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700">Uwagi</label>
+                <label className="block text-sm font-medium text-slate-700">{t.notes}</label>
                 <textarea value={quoteNotes} onChange={(e) => setQuoteNotes(e.target.value)} rows={3}
-                  className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="Szczegóły wyceny..." />
+                  className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder={t.notesPlaceholder} />
               </div>
             </div>
             <div className="mt-6 flex justify-end gap-3">
               <button onClick={() => setQuoteModal(null)}
-                className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100">Anuluj</button>
+                className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100">{t.cancel}</button>
               <button onClick={() => sendQuote(quoteModal)} disabled={!quoteAmount}
                 className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50">
-                Wyślij wycenę
+                {t.sendQuote}
               </button>
             </div>
           </div>

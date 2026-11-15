@@ -1,3 +1,4 @@
+import { useLanguage } from "../lib/language";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiFetch } from "../lib/api";
@@ -66,17 +67,10 @@ const statusColors: Record<string, string> = {
 export default function Portal() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [lang, setLang] = useState<"PL" | "EN">("PL");
+  const { lang } = useLanguage();
 
   useEffect(() => {
     apiFetch("/api/orders").then((data) => { setOrders(data); setLoading(false); }).catch(() => setLoading(false));
-    const updateLanguage = () => {
-      const savedLang = localStorage.getItem("linklang_lang") as "PL" | "EN" | null;
-      if (savedLang) setLang(savedLang);
-    };
-    updateLanguage();
-    window.addEventListener("languageChange", updateLanguage);
-    return () => window.removeEventListener("languageChange", updateLanguage);
   }, []);
 
   const t = content[lang];

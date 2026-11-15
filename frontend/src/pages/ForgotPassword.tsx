@@ -1,3 +1,5 @@
+import { localizeMessage } from "../lib/messages";
+import { useLanguage } from "../lib/language";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { apiFetch } from "../lib/api";
@@ -54,7 +56,7 @@ export default function ForgotPassword() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
   const step = token ? "reset" : "email";
-  const [lang, setLang] = useState<"PL" | "EN">("PL");
+  const { lang } = useLanguage();
   const [email, setEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -63,14 +65,7 @@ export default function ForgotPassword() {
   const [success, setSuccess] = useState("");
 
   useEffect(() => {
-    const updateLanguage = () => {
-      const savedLang = localStorage.getItem("linklang_lang") as "PL" | "EN" | null;
-      if (savedLang) setLang(savedLang);
-    };
-    updateLanguage();
-    window.addEventListener("languageChange", updateLanguage);
     window.scrollTo(0, 0);
-    return () => window.removeEventListener("languageChange", updateLanguage);
   }, []);
 
   const t = content[lang];
@@ -140,8 +135,8 @@ export default function ForgotPassword() {
                   className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
                 />
               </div>
-              {error && <p className="text-sm text-red-600">{error}</p>}
-              {success && <p className="text-sm text-green-600">{success}</p>}
+              {error && <p className="text-sm text-red-600">{localizeMessage(error, lang, content)}</p>}
+              {success && <p className="text-sm text-green-600">{localizeMessage(success, lang, content)}</p>}
               <button
                 type="submit"
                 disabled={loading}
@@ -176,8 +171,8 @@ export default function ForgotPassword() {
                 required
                 minLength={8}
               />
-              {error && <p className="text-sm text-red-600">{error}</p>}
-              {success && <p className="text-sm text-green-600">{success}</p>}
+              {error && <p className="text-sm text-red-600">{localizeMessage(error, lang, content)}</p>}
+              {success && <p className="text-sm text-green-600">{localizeMessage(success, lang, content)}</p>}
               <button
                 type="submit"
                 disabled={loading}

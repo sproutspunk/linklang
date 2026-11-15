@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useLanguage } from "../lib/language";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { apiFetch } from "../lib/api";
 import { useAuth } from "../lib/store";
@@ -7,8 +8,6 @@ import {
   ArrowRight, ShieldCheck, Clock, MapPin,
   Search, Bot, Leaf,
 } from "lucide-react";
-
-type Language = "PL" | "EN";
 
 const content = {
   PL: {
@@ -155,21 +154,8 @@ const iconMap: Record<string, any> = {
 
 export default function Home() {
   const { user } = useAuth();
-  const [lang, setLang] = useState<Language>(() => {
-    const saved = localStorage.getItem("linklang_lang") as Language | null;
-    return saved || "PL";
-  });
+  const { lang } = useLanguage();
   const t = content[lang];
-
-  // Słuchaj zmian języka z Navbar
-  useEffect(() => {
-    const handleLanguageChange = () => {
-      const newLang = localStorage.getItem("linklang_lang") as Language | null;
-      if (newLang) setLang(newLang);
-    };
-    window.addEventListener("languageChange", handleLanguageChange);
-    return () => window.removeEventListener("languageChange", handleLanguageChange);
-  }, []);
 
   const [contactForm, setContactForm] = useState({ name: "", email: "", message: "", website: "" });
   const [contactSubmitted, setContactSubmitted] = useState(false);
@@ -245,10 +231,10 @@ export default function Home() {
                 <Search className="h-3.5 w-3.5 text-brand-600" /> SEO 100/100
               </span>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm">
-                <Bot className="h-3.5 w-3.5 text-brand-600" /> Agentic Browsing Ready
+                <Bot className="h-3.5 w-3.5 text-brand-600" /> {lang === "PL" ? "Gotowa dla agentów AI" : "Agentic Browsing Ready"}
               </span>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm">
-                <Leaf className="h-3.5 w-3.5 text-brand-600" /> 0.09 g CO₂ / visit
+                <Leaf className="h-3.5 w-3.5 text-brand-600" /> {lang === "PL" ? "0,09 g CO₂ / wizytę" : "0.09 g CO₂ / visit"}
               </span>
             </div>
           </div>
@@ -377,7 +363,7 @@ export default function Home() {
             </button>
             {contactError && (
               <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                {contactError}
+                {lang === "PL" ? "Nie udało się wysłać wiadomości. Spróbuj ponownie później." : "The message could not be sent. Please try again later."}
               </div>
             )}
             {contactSubmitted && (
@@ -439,7 +425,7 @@ export default function Home() {
             </div>
           </div>
           <div className="border-t border-slate-200 pt-8 text-xs text-slate-700 text-center">
-            <p>{lang === "PL" ? "Designed & built with precision for professional translation services." : "Designed & built with precision for professional translation services."}</p>
+            <p>{lang === "PL" ? "Strona zaprojektowana i wykonana z dbałością o profesjonalną obsługę tłumaczeń." : "Designed & built with precision for professional translation services."}</p>
           </div>
         </div>
       </footer>

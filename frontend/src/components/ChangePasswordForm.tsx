@@ -1,3 +1,4 @@
+import { localizeMessage } from "../lib/messages";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { apiFetch } from "../lib/api";
@@ -113,8 +114,8 @@ export default function ChangePasswordForm({ lang = "PL" }: { lang?: "PL" | "EN"
           <p className="text-xs text-slate-500">
             {t.passwordHint}
           </p>
-          {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
-          {success && <p className="mt-2 text-sm text-green-600">{success}</p>}
+          {error && <p className="mt-2 text-sm text-red-600">{localizeMessage(error, lang, content)}</p>}
+          {success && <p className="mt-2 text-sm text-green-600">{localizeMessage(success, lang, content)}</p>}
           <button
             type="submit"
             disabled={submitting}
