@@ -1,34 +1,37 @@
-# LinkLang - Professional Polish-English Translation Services
+# LinkLang — Polish-English Translation and Interpreting
 
-LinkLang provides professional translation and interpreting services across Scotland and the UK.
+> LinkLang provides human-delivered Polish-English translation and interpreting. Based in Banff, Scotland, with in-person services within 50 miles of Banff and remote services throughout the United Kingdom. The website supports Polish and English.
 
-## Services
+## Services and indicative prices
 
-- **Document Translation** - Professional Polish to English and vice versa translation for contracts, certificates, medical records, and more. From £35.
-- **On-site Interpreting** - Face-to-face interpretation services within 25 miles of Aberdeen. From £70/hour.
-- **Phone & Video Interpreting** - Remote interpretation via Zoom, Teams, or WhatsApp. Available UK-wide. From £45 per 30-minute session.
-- **Public Services Support** - Assistance with UK public institutions like Universal Credit, HMRC, Jobcentre Plus, and NHS.
-- **Business Packages** - Corporate translation and interpreting services with flexible retainer options.
+- Document translation: Polish to English and English to Polish, including contracts, certificates and medical documents. From £35; the final quote depends on length and deadline.
+- In-person interpreting: appointments with public institutions, healthcare providers, employers and solicitors, within 50 miles of Banff. From £60 for the first hour, then £15 per additional 15 minutes.
+- Phone and video interpreting: available UK-wide via Zoom, Teams or WhatsApp. From £30 for the first 30 minutes, then £15 per additional 15 minutes.
+- Public-services language support: interpreting questions and the client's answers for Universal Credit, HMRC, Jobcentre Plus and NHS. The service does not complete forms on the client's behalf.
+- Business language support: HR documents, onboarding, site visits, health-and-safety audits and meetings. Retainer arrangements may be agreed.
 
-## Key Information
+## Location and coverage
 
-- **Based in:** Aberdeen, Scotland
-- **Service Area:** In-person within 25-mile radius; Online across entire UK
-- **Languages:** Polish ↔ English
-- **Quality:** All work is completed personally - no automated translation or outsourcing
-- **Confidentiality:** Documents are secure and never shared with third parties
+- Base: Banff, Aberdeenshire, Scotland, United Kingdom.
+- In-person service: within a 50-mile radius of Banff; confirm the appointment location when requesting a quote.
+- Remote service: throughout the UK.
+- Languages: Polish and English.
 
-## Coverage Areas
+## Enquiries and ordering
 
-Aberdeen, Stonehaven, Banchory, Inverurie, Ellon, Peterhead, Fraserburgh, Turriff, Glasgow, Edinburgh, Dundee, Inverness, Perth, Stirling, Aberdeenshire, Highlands, Scottish Borders, Fife, Moray, Angus, and UK-wide online.
-
-## Contact
-
+- [Website and contact form](https://linklang.co.uk/): view the offer and send an enquiry.
+- [Support centre](https://linklang.co.uk/support): help with services, quotes, accounts, payment and privacy, in Polish and English.
 - Email: hello@linklang.co.uk
-- Phone: 07770 110735
-- Website: https://linklang.co.uk
+- Phone: +44 7770 110735
+- Online orders, document uploads and payments use the authenticated client account. An enquiry alone does not commit the client to a purchase.
 
-## Legal
+## Service limits and privacy
 
-- [Privacy Policy](https://linklang.co.uk/privacy)
-- [Terms & Conditions](https://linklang.co.uk/terms)
+- LinkLang is not a sworn translator. Requests requiring certified translations for a court, the Home Office or a civil registry are referred to a certified partner.
+- Documents do not go into an AI translation system. Infrastructure, email and payment providers may process information as described in the privacy policy.
+- Before sending medical records or criminal-offence information, contact LinkLang to agree whether the order can be accepted and how to provide the material. Health-data orders require separate explicit consent.
+- [Privacy policy](https://linklang.co.uk/privacy)
+- [Terms and conditions](https://linklang.co.uk/terms)
+- [Resource discovery manifest](https://linklang.co.uk/.well-known/ard.json)
+
+These are public service-information resources. LinkLang does not advertise an MCP server, an A2A agent or an unauthenticated ordering API. Prices and availability must be confirmed with LinkLang.

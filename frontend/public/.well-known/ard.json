@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "@context": "https://agenticresourcediscovery.org/context/v1",
+      "identifier": "urn:air:linklang.co.uk:skill:translation-enquiries",
+      "displayName": "LinkLang — translation and interpreting enquiry guide",
+      "description": "Guidance for an AI assistant helping a user find LinkLang services and prepare a Polish-English translation or interpreting enquiry. Describes coverage, indicative pricing, contact routes and service limits. No automated booking or ordering API.",
+      "type": "text/markdown; profile=\"urn:air:agent-skills\"",
+      "url": "https://linklang.co.uk/agent-skills/linklang-enquiries/SKILL.md",
+      "representativeQueries": [
+        "Find a Polish-English translator in Banff, Scotland.",
+        "Potrzebuję tłumaczenia dokumentów z polskiego na angielski w Wielkiej Brytanii.",
+        "Find Polish-English interpreting within 50 miles of Banff or by phone and video across the UK."
+      ]
+    }
+  ]
+}
