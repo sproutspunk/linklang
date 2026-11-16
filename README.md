@@ -1,438 +1,266 @@
-# LinkLang - Professional Translation & Interpreting Services
+# LinkLang
 
-A modern, full-stack web application for managing translation and interpreting services. Built with React, TypeScript, Hono, and Cloudflare infrastructure.
+Polish-English translation and interpreting service website with a bilingual client portal and administration interface.
 
-**Live:** https://linklang.co.uk
+- Public website: <https://www.linklang.co.uk/>
+- Production API: <https://api.linklang.co.uk/>
+- Documentation reviewed against main on **16 November 2026**.
 
----
+## Implemented scope
 
-## 🎯 Project Overview
+The website presents five service types: document translation, in-person interpreting, phone/video interpreting, public-services support and business services. Registered clients can create orders, attach documents, read and send order messages, accept quotations and start Stripe Checkout. Administrators can prepare quotations, update statuses and review orders.
 
-LinkLang is a professional translation services platform that connects clients with qualified translators and interpreters. The platform streamlines service requests, quote generation, payment processing, and real-time communication.
+Quotations are **created by an administrator**. This is not an automatic quotation engine. Messaging uses HTTP requests and explicit reloads in the order view; the source does not implement WebSocket or server-push chat. The public payment-preview page is a static UI example, not proof of a successful payment.
 
-### Key Features
+PL/EN switching covers the public pages, authentication, client/order views, help and payment preview. The interface includes cookie preferences and health-data consent records. These features do not by themselves establish full GDPR or WCAG compliance.
 
-- **Service Management**: Document translation, on-site interpreting, phone/video interpreting, public services support, and corporate packages
-- **Quote System**: Automated quote generation and client acceptance
-- **Secure Authentication**: JWT-based auth with strong password requirements (8+ chars, uppercase, lowercase, numbers, special chars)
-- **Real-time Communication**: Messaging system between clients and service providers
-- **Payment Processing**: Online payment integration
-- **Admin Dashboard**: Comprehensive order and client management
-- **Health-data Consent**: Versioned, auditable consent for medical orders and NHS requests, with client withdrawal and administrator records
-- **Multi-language Support**: PL/EN content and language switching throughout public and client views
-- **Support Centre**: PL/EN help page for common service, account, payment, and privacy questions
-- **Cookie Management**: Transparent cookie preferences with GDPR compliance
-- **Responsive Design**: Mobile-first design with Tailwind CSS
+## Architecture and data responsibilities
 
----
+| Component                                       | Responsibility                                                                                                    | Connections implemented in code                                                                                                      |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| React + TypeScript frontend on Cloudflare Pages | Public pages and account/order interface                                                                          | Sends API requests and receives responses; follows a returned Stripe Checkout URL                                                    |
+| Hono API on Cloudflare Workers                  | Authentication, access checks and service workflow                                                                | Reads/writes D1; uploads/downloads R2 objects; creates Stripe Checkout sessions and receives Stripe webhooks; requests Resend emails |
+| Cloudflare D1                                   | Accounts, orders, quotations, messages, document metadata, status/payment/consent records and rate-limit counters | Queried by the API through Drizzle and D1 APIs                                                                                       |
+| Cloudflare R2                                   | Order document files                                                                                              | API writes uploaded files and reads files for authorised downloads                                                                   |
+| Stripe Checkout                                 | Hosted payment flow                                                                                               | API requests a session and verifies the webhook before processing a paid session                                                     |
+| Resend                                          | Transactional email delivery                                                                                      | API sends notifications through the email module                                                                                     |
 
-## 🏗️ Architecture
+The frontend uses React Router, Zustand, Tailwind CSS, Lucide icons and date-fns. The backend uses Hono, Drizzle, jose, bcryptjs and Zod. Declared dependencies and exact installed versions are recorded in the workspace package files and `package-lock.json`; the frontend currently declares Vite 8.2.1 or compatible updates, not Vite 5.
 
-### Technology Stack
+## Tracked project tree
 
-**Frontend:**
-- React 18.3.1 with TypeScript
-- Vite 5.3.4 (build tool)
-- React Router DOM 6.25.1
-- Zustand 4.5.4 (state management)
-- Tailwind CSS 3.4.4
-- Lucide React (icons)
-- date-fns 3.6.0 (date formatting)
+This lists tracked files at the documentation review. Generated output, installed dependencies, local credentials and Wrangler local state are excluded.
 
-**Backend:**
-- Hono 4.13.2 (HTTP framework for Cloudflare Workers)
-- Drizzle ORM 0.45.2
-- SQLite with Cloudflare D1
-- JWT Authentication (jose 6.2.8)
-- bcryptjs 2.4.3 (password hashing)
-- Zod 3.23.8 (validation)
-- Resend 6.19.0 (email service)
-- Stripe Checkout (payment processing, called via REST API)
-
-**Infrastructure:**
-- Cloudflare Workers (serverless backend)
-- Cloudflare Pages (frontend hosting)
-- Cloudflare D1 (SQLite database)
-
----
-
-## 📁 Project Structure
-
-```
-linklang-vite/
-├── backend/                    # Hono/Cloudflare Workers API
+```text
+linklang/
+├── .github/
+│   └── workflows/
+│       └── deploy.yml
+├── backend/
+│   ├── migrations/
+│   │   ├── 0001_init.sql
+│   │   ├── 0002_normalize_user_emails.sql
+│   │   └── 0003_health_consent_events.sql
+│   ├── scripts/
+│   │   └── generate-seed.mjs
 │   ├── src/
-│   │   ├── index.ts           # Main API routes & middleware
-│   │   ├── schema.ts          # Drizzle ORM database schema
-│   │   ├── db.ts              # Database connection setup
-│   │   ├── email.ts           # Email notification service
-│   │   └── rate-limit.ts      # Anti-brute-force protection
-│   ├── migrations/            # Database migrations
-│   └── package.json
-│
-├── frontend/                   # React SPA with Vite
-│   ├── src/
-│   │   ├── pages/             # Route pages
-│   │   │   ├── Home.tsx       # Landing page
-│   │   │   ├── Login.tsx      # Login page
-│   │   │   ├── Register.tsx       # Registration
-│   │   │   ├── ForgotPassword.tsx
-│   │   │   ├── Privacy.tsx    # Privacy policy
-│   │   │   ├── Terms.tsx      # Terms & conditions
-│   │   │   ├── Support.tsx    # Support centre
-│   │   │   ├── Portal.tsx     # Client dashboard
-│   │   │   ├── NewOrder.tsx   # Create order form
-│   │   │   ├── OrderDetail.tsx # Order communication hub
-│   │   │   ├── PaymentPreview.tsx # Stripe checkout preview
-│   │   │   └── Admin.tsx      # Admin dashboard
-│   │   ├── components/
-│   │   │   ├── Layout.tsx     # Main layout wrapper
-│   │   │   ├── Navbar.tsx     # Navigation bar
-│   │   │   ├── CookieBanner.tsx # Cookie preferences
-│   │   │   ├── ChangePasswordForm.tsx # Account password change
-│   │   │   ├── DocumentUpload.tsx # Order document upload
-│   │   │   └── PasswordInput.tsx # Password field with show/hide toggle
-│   │   ├── lib/
-│   │   │   ├── store.ts       # Zustand auth state
-│   │   │   ├── api.ts         # API client wrapper
-│   │   │   └── utils.ts       # Helper functions
-│   │   ├── App.tsx            # Route definitions
-│   │   ├── main.tsx           # Entry point
-│   │   └── index.css          # Global styles
+│   │   ├── db.ts
+│   │   ├── email.ts
+│   │   ├── index.ts
+│   │   ├── rate-limit.ts
+│   │   └── schema.ts
+│   ├── .dev.vars.example
+│   ├── drizzle.config.ts
+│   ├── package.json
+│   └── tsconfig.json
+├── frontend/
 │   ├── public/
-│   │   ├── robots.txt         # SEO robots file
-│   │   ├── sitemap.xml        # SEO sitemap
-│   │   ├── llms.txt           # AI agent guidelines
-│   │   └── linklang_logo.svg  # Brand logo
-│   ├── vite.config.ts
+│   │   ├── .well-known/
+│   │   │   └── ard.json
+│   │   ├── agent-skills/
+│   │   │   └── linklang-enquiries/
+│   │   │       └── SKILL.md
+│   │   ├── _headers
+│   │   ├── _redirects
+│   │   ├── favicon.ico
+│   │   ├── linklang_logo.svg
+│   │   ├── llms.txt
+│   │   ├── robots.txt
+│   │   └── sitemap.xml
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── ChangePasswordForm.tsx
+│   │   │   ├── CookieBanner.tsx
+│   │   │   ├── DocumentUpload.tsx
+│   │   │   ├── Layout.tsx
+│   │   │   ├── Navbar.tsx
+│   │   │   └── PasswordInput.tsx
+│   │   ├── lib/
+│   │   │   ├── analytics.ts
+│   │   │   ├── api.ts
+│   │   │   ├── labels.ts
+│   │   │   ├── language.ts
+│   │   │   ├── messages.ts
+│   │   │   ├── store.ts
+│   │   │   └── utils.ts
+│   │   ├── pages/
+│   │   │   ├── Admin.tsx
+│   │   │   ├── ForgotPassword.tsx
+│   │   │   ├── Home.tsx
+│   │   │   ├── Login.tsx
+│   │   │   ├── NewOrder.tsx
+│   │   │   ├── OrderDetail.tsx
+│   │   │   ├── PaymentPreview.tsx
+│   │   │   ├── Portal.tsx
+│   │   │   ├── Privacy.tsx
+│   │   │   ├── Register.tsx
+│   │   │   ├── Support.tsx
+│   │   │   └── Terms.tsx
+│   │   ├── App.tsx
+│   │   ├── index.css
+│   │   ├── main.tsx
+│   │   └── vite-env.d.ts
+│   ├── tests/
+│   │   ├── analytics.browser.cjs
+│   │   └── language.browser.cjs
+│   ├── .env.production.example
+│   ├── index.html
+│   ├── package.json
+│   ├── postcss.config.js
 │   ├── tailwind.config.js
-│   └── package.json
-│
-├── migrations/                # Database migration files
-├── wrangler.toml             # Root Cloudflare config
-├── package.json              # Root workspace config
-└── README.md                 # This file
+│   ├── tsconfig.json
+│   └── vite.config.ts
+├── .gitignore
+├── CODE_OF_CONDUCT.md
+├── LICENSE
+├── linklang_logo.svg
+├── package-lock.json
+├── package.json
+├── README.md
+├── SECURITY.md
+└── wrangler.toml
 ```
 
----
+There is no root-level `migrations/` directory. D1 migrations live in `backend/migrations/`. The root `wrangler.toml` is the Worker configuration; DB and R2 bindings are declared in both its default and production environments.
 
-## 🚀 Getting Started
+## Local setup
 
-### Prerequisites
+Use **Node.js 24** to match CI, npm and Git. From a fresh checkout:
 
-- Node.js 18+ and npm 9+
-- Git
-
-### Local Development Setup
-
-1. **Clone & Install**
 ```bash
 git clone https://github.com/sproutspunk/linklang.git
-cd linklang-vite
-npm install
+cd linklang
+npm ci
+cp backend/.dev.vars.example .dev.vars.production
 ```
 
-2. **Configure Environment Variables**
+Keep `.dev.vars.production` in the **repository root beside `wrangler.toml`**, not in `backend/`. Configure development values there; the file is ignored by Git:
 
-**Backend** - Create `backend/.dev.vars`:
-```bash
-# Generate JWT secret
-node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
-
-# Then create .dev.vars:
-JWT_SECRET=<your-generated-secret>
-RESEND_API_KEY=<resend-api-key-for-emails>
-CORS_ORIGIN=http://localhost:5173,https://linklang.co.uk
+```dotenv
+JWT_SECRET=<random-development-secret>
+RESEND_API_KEY=<development-email-key-if-needed>
+CORS_ORIGIN=http://localhost:5173
 APP_URL=http://localhost:5173
-CONTACT_INBOX_EMAIL=<inbox-for-contact-form-and-signup-notifications>
-STRIPE_SECRET_KEY=<stripe-secret-key>
-STRIPE_WEBHOOK_SECRET=<stripe-webhook-signing-secret>
+CONTACT_INBOX_EMAIL=<development-inbox-if-needed>
+STRIPE_SECRET_KEY=<stripe-test-key-if-testing-checkout>
+STRIPE_WEBHOOK_SECRET=<test-webhook-secret-if-needed>
 ```
 
-**Frontend** - Create `frontend/.env.development`:
-```
-VITE_API_URL=http://localhost:8787
-```
+Generate a development JWT secret with Node's `crypto.randomBytes` rather than copying a production secret. Use test credentials and controlled recipients when exercising integrations.
 
-3. **Run Development Server**
+The example file's comment about production being the only configured environment is outdated; the current configuration also defines default bindings. Its instruction to place the env-specific file at the root remains relevant to `wrangler dev --env production`.
+
+Start the local services:
+
 ```bash
+npm run db:migrate:local -w backend
 npm run dev
 ```
 
-This starts both:
-- **Frontend**: http://localhost:5173 (or next available port)
-- **Backend**: http://localhost:8787
+The root development script starts both workspaces. The frontend normally uses `http://localhost:5173`; the backend normally uses `http://localhost:8787`. Set `frontend/.env.development` with `VITE_API_URL=http://localhost:8787` if an explicit API override is needed. The API client otherwise chooses the production API on recognised production hosts and localhost for local development.
 
----
+Use the actual Vite port in CORS if port 5173 is unavailable. Local Wrangler bindings use local development storage unless remote execution is explicitly selected.
 
-## 📊 Database Schema
+### Database scripts
 
-### Core Tables
+Use the backend's declared commands, such as `db:migrate:local` and `db:seed:local`. The root `db:seed` and `db:push` aliases reference backend script names that are not currently declared.
 
-| Table | Purpose | Key Fields |
-|-------|---------|-----------|
-| `users` | User accounts | id, name, email, password (hashed), role (CLIENT/ADMIN), phone, company |
-| `orders` | Service requests | id, userId, type, status, sourceLang, targetLang, deadline, location, context |
-| `quotes` | Price quotes | id, orderId, userId, amount, currency, accepted, paid |
-| `messages` | Order communication | id, orderId, userId, content, isAdmin |
-| `documents` | Uploaded files | id, orderId, filename, url, isFinal |
-| `statusLogs` | Audit trail | id, orderId, status, changedBy |
-| `payments` | Payment records | id, quoteId, provider, amount, status |
-| `healthConsentEvents` | Immutable health-data consent audit trail | orderId, clientId, action, channel, language, consentVersion, privacyPolicyVersion, requestId |
-| `rateLimits` | Rate limit tracking | rlKey (PK), count, windowStart |
+Local seed generation is intended for development. The remote-seed script requires an explicit override because it creates demonstration accounts; it is not a production setup step.
 
-### Order Types
-- TRANSLATION
-- INTERPRETER
-- PHONE_VIDEO
-- PUBLIC_SERVICES
-- BUSINESS
+## Records and order lifecycle
 
-### Order Status Flow
-```
-NEW → UNDER_REVIEW → QUOTE_SENT → APPROVED → PAID → IN_PROGRESS → READY → DOWNLOADED
-↓ (Anytime)
-CANCELLED
-```
+Database definitions are in `backend/src/schema.ts`; SQL migrations are in `backend/migrations/`.
 
-### Health-data Consent
+| SQL table               | Purpose                                                    |
+| ----------------------- | ---------------------------------------------------------- |
+| `users`                 | User account, password hash and CLIENT/ADMIN role          |
+| `orders`                | Service request, selected type, status and requirements    |
+| `quotes`                | Administrator-created amount, acceptance and payment flags |
+| `messages`              | Order-associated communication                             |
+| `documents`             | File metadata and R2 object reference                      |
+| `status_logs`           | Status-change records                                      |
+| `payments`              | Provider/session reference and payment state               |
+| `health_consent_events` | Versioned consent and withdrawal events                    |
+| `rate_limits`           | D1-backed fixed-window rate counters                       |
 
-- Translation orders with `context: medical` and public-services orders with `institution: nhs` are health-data orders.
-- The client must actively confirm the server-provided consent text before submitting an NHS request with documents.
-- A client can grant, withdraw, and grant consent again from the order detail view.
-- Consent events preserve the accepted text, language, consent and privacy-policy versions, channel, timestamps, and idempotency request ID.
-- Active consent is required before uploading documents containing health data, sending health-data messages, or advancing a health-data order to `IN_PROGRESS` or `READY`.
-- Administrators can view consent history and record a withdrawal received by email or phone.
+Allowed order statuses are `NEW`, `UNDER_REVIEW`, `QUOTE_SENT`, `APPROVED`, `PAID`, `IN_PROGRESS`, `READY`, `DOWNLOADED` and `CANCELLED`. These describe the intended workflow; the administrator status endpoint validates the enum and relevant health-consent checks, rather than enforcing every transition in a strict state machine.
 
----
+The new-order UI limits its initial file selection to five files. The upload endpoint enforces a per-file limit of 10 MiB. Files are stored in R2 and downloaded through an authenticated endpoint checking order ownership or administrator access and the document/order association.
 
-## 🔐 Security Features
+### Health-data consent
 
-- **Password Requirements**: 8+ characters, uppercase, lowercase, number, special character
-- **JWT Authentication**: 7-day token expiration
-- **Rate Limiting**: Anti-brute-force protection (20 requests/900s on auth endpoints)
-- **HTTPS**: All production traffic encrypted
-- **CORS Protection**: Configurable allowed origins
-- **Input Validation**: Zod schema validation on all endpoints
-- **SQL Injection Prevention**: Parameterized queries via Drizzle ORM
+Orders with medical context and public-services orders for NHS are treated as health-data orders by the backend. Consent events record the accepted text, language, versions, channel, timestamp and request ID. Clients can grant and withdraw consent; administrators can record a withdrawal received through another channel.
 
----
+Active consent is checked before the relevant document/message operations and before moving a health-data order to `IN_PROGRESS` or `READY`. This is an implemented workflow, not an independent legal-compliance assessment or a claim that database administrators cannot alter stored records.
 
-## 📧 Email Notifications
+## Authentication and validation
 
-Triggered via Resend API:
+Passwords are hashed with bcryptjs. Registration and password changes apply the password expression in `backend/src/index.ts`: at least eight characters, including upper/lowercase letters, a digit and an allowed special character. Login issues a JWT expiring after seven days. The client stores its auth token in localStorage.
 
-| Event | Recipients | Purpose |
-|-------|-----------|---------|
-| Registration | New user | Welcome email |
-| Order Created | Client | Order confirmation |
-| Quote Sent | Client | Quote notification with amount |
-| Status Changed | Client | Order status update |
-| Contact Form | Admin + sender | New inquiry confirmation |
+The API uses Zod validation on defined request payloads and ownership/role checks on protected routes. Auth/contact rate-limit middleware uses D1 counters with a limit of 20 requests per 900-second window for the configured route/IP key. This does not establish that every endpoint has identical validation or rate limiting.
 
----
+## API routes
 
-## 🌐 Deployment
+The implementation in `backend/src/index.ts` is authoritative.
 
-Production deploys use the root `wrangler.toml`. The Worker is named
-`linklang-api` and serves `api.linklang.co.uk`; the frontend is deployed to the
-Cloudflare Pages project `linklang`.
+| Group           | Routes                                                                                                                                                                            |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Authentication  | `POST /api/register`, `POST /api/login`, `GET /api/me`, `POST /api/change-password`, `POST /api/forgot-password`, `POST /api/reset-password`                                      |
+| Orders          | `GET /api/orders`, `POST /api/orders`, `GET /api/orders/:id`, `PATCH /api/orders/:id/status` (administrator)                                                                      |
+| Consent         | `GET /api/health-consent/text`, `POST /api/orders/:id/health-consent/grant`, `POST /api/orders/:id/health-consent/withdraw`, `POST /api/admin/orders/:id/health-consent/withdraw` |
+| Quotes/payments | `POST /api/quotes` (administrator), `POST /api/quotes/:id/accept`, `POST /api/quotes/:id/checkout`, `POST /api/stripe/webhook`                                                    |
+| Messages        | `GET /api/orders/:id/messages`, `POST /api/orders/:id/messages`                                                                                                                   |
+| Documents       | `POST /api/orders/:id/documents`, `GET /api/orders/:id/documents/:docId/download`                                                                                                 |
+| Administration  | `GET /api/admin/summary`                                                                                                                                                          |
+| Public contact  | `POST /api/contact`                                                                                                                                                               |
 
-### Frontend (Cloudflare Pages)
+Checkout uses the stored, accepted quotation amount and checks that the request belongs to the client. The webhook verifies Stripe's signature and processes a paid Checkout session. The static `/payment-preview` page is separate from this integration.
+
+## Email notifications
+
+The email module includes welcome and administrator new-user notifications, order confirmations, quotation notifications, status updates, password-reset links and public-contact notifications/acknowledgements. Delivery requires a working Resend configuration. Having a send call in code is not proof that a particular message reached an inbox.
+
+## Deployment
+
+The GitHub Actions workflow uses Node.js 24 and `npm ci`. On pushes to `main`, the backend job type-checks, applies remote D1 migrations and deploys the Worker. The frontend job builds and deploys `frontend/dist` to Pages. These are separate jobs, not a guaranteed sequential backend-then-frontend pipeline. Same-repository pull requests build and deploy a frontend preview, without deploying the backend.
+
+The configured Worker name is `linklang-api`, with custom API domain `api.linklang.co.uk`. The default Pages project is `linklang`. CI requires `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` (secret or supported repository variable). Frontend overrides include `VITE_API_URL`, `VITE_API_URL_PREVIEW` and `CLOUDFLARE_PAGES_PROJECT` as used in the workflow.
+
+Configure the `DB` D1 binding, `DOCUMENTS_BUCKET` R2 binding and environment variables in root `wrangler.toml`. Runtime credentials include `JWT_SECRET`, `RESEND_API_KEY`, `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`. Production CORS currently includes both the bare and www site hosts. Preserve the rest of the production variables when changing CORS.
+
+Manual deployment commands, from the repository root after configuring infrastructure and credentials:
 
 ```bash
+npm run typecheck -w backend
+npx wrangler d1 migrations apply linklang-db --remote --env production --config wrangler.toml
+npx wrangler deploy --env production --config wrangler.toml
 npm run build -w frontend
 npx wrangler pages deploy frontend/dist --project-name=linklang --branch=main
 ```
 
-### Backend (Cloudflare Workers)
+The configuration duplicates DB/R2 bindings between default and production environments to support deployment paths using either environment. The repository alone does not prove that no additional dashboard-managed deployment integrations exist.
+
+## Validation and measured results
 
 ```bash
-# Run from the repository root.
-npx wrangler deploy --env production --config wrangler.toml
+npm run typecheck -w backend
+npm run build -w frontend
 ```
 
-### Environment Setup (Production)
+Browser-check scripts live in `frontend/tests/`. They use an externally installed Playwright module through `PLAYWRIGHT_MODULE`, a Chromium executable at `/usr/bin/chromium` and a running frontend. They are not exposed as an npm test script or run by the current deployment workflow. See each script's setup comment and `CHECK_URL` option.
 
-1. **Cloudflare Dashboard** → Workers & Pages → Settings
-2. Create the R2 bucket used for order document uploads (name must match
-   `wrangler.toml`'s `[[env.production.r2_buckets]]` binding):
-```bash
-npx wrangler r2 bucket create linklang-documents
-```
-3. Set secrets:
-```bash
-npx wrangler secret put JWT_SECRET --env production
-npx wrangler secret put RESEND_API_KEY --env production
-npx wrangler secret put STRIPE_SECRET_KEY --env production
-npx wrangler secret put STRIPE_WEBHOOK_SECRET --env production
-```
-4. **GitHub Actions** repo secrets/vars: `CLOUDFLARE_API_TOKEN`,
-   `CLOUDFLARE_ACCOUNT_ID` (secret or repo variable), optional
-   `VITE_API_URL`, `CLOUDFLARE_PAGES_PROJECT`.
+Both TypeScript configurations enable strict mode. This repository does not currently provide ESLint/Prettier scripts or configuration, so those should not be described as enforced project checks.
 
-5. **Configure CORS**:
-Update `wrangler.toml`:
-```toml
-[env.production]
-vars = { CORS_ORIGIN = "https://linklang.co.uk" }
-```
+Fixed bundle sizes and Lighthouse 100/100 claims have been removed: the tracked tree does not contain the dated reports needed to substantiate them for the current build. Report performance with the tested URL, commit, date, device/profile and tool version. No independent WCAG or GDPR certification is established by this README.
 
-6. **Apply D1 migrations on remote** (also done automatically by CI on every
-   push to `main`, but useful to run manually / verify):
-```bash
-npx wrangler d1 migrations apply linklang-db --remote --env production --config wrangler.toml
+## Design and legal pages
 
-# Verify no legacy mixed-case emails remain (must return 0):
-npx wrangler d1 execute linklang-db --remote --env production \
-  --command "SELECT COUNT(*) AS mixed FROM users WHERE email != LOWER(email)"
-```
+Tailwind's brand palette defines bottle green `#0f3d2e`, off-white and slate colours; the base stylesheet also defines blue custom properties and light gradients. Typography and radii vary by component. Neither a universal 500 font weight nor a single 8px radius describes the entire implementation.
 
----
+Public pages include privacy, terms, help and cookie preferences. They are application content, not evidence of legal certification. No newsletter opt-out system is implemented merely by the presence of transactional emails and cookie controls.
 
-## 📈 Performance
+## License and contact
 
-- **Frontend Build**: 67.35 KB (gzipped)
-- **Backend Worker**: 134.20 KB (gzipped)
-- **Lighthouse Scores**: 
-  - Performance: 100/100
-  - Accessibility: 100/100
-  - Best Practices: 100/100
-  - SEO: 100/100
+The committed [LICENSE](LICENSE) is **MIT**. The previous README's proprietary/all-rights-reserved statement conflicted with that file.
 
----
-
-## 🎨 Design System
-
-### Color Palette
-
-- **Primary Brand Color**: `#0f3d2e` (Bottle Green)
-- **Backgrounds**: `#f7f7f5` (Off-white), `#ffffff` (White)
-- **Text**: Slate color scale (900-50)
-- **Accents**: Brand-600 for interactive elements
-
-### Typography
-
-- **Font Family**: System stack (Tailwind default)
-- **Font Weights**: 500 (medium) for consistency
-- **Headings**: Medium weight, slate-900
-- **Body**: Small/xs sizes with slate-600 for descriptions
-
-### Spacing & Layout
-
-- **Max Width**: 6xl (64rem) for content
-- **Grid**: Responsive 1-2-3 columns
-- **Shadows**: Subtle, brand-tinted shadows
-- **Border Radius**: 8px (rounded-lg)
-
----
-
-## 🔄 API Endpoints
-
-### Authentication
-- `POST /api/register` - User registration
-- `POST /api/login` - User login
-- `GET /api/me` - Get current user info
-- `POST /api/change-password` - Change own password
-- `POST /api/forgot-password` - Request password reset email
-- `POST /api/reset-password` - Reset password with emailed token
-
-### Orders
-- `GET /api/orders` - List orders (role-based filtering)
-- `POST /api/orders` - Create new order
-- `GET /api/orders/:id` - Get order details
-- `PATCH /api/orders/:id/status` - Update order status (admin only)
-
-### Health-data Consent
-- `GET /api/health-consent/text?language=PL|EN` - Get the current server-controlled consent text (authenticated)
-- `POST /api/orders/:id/health-consent/grant` - Grant consent for the client-owned health-data order
-- `POST /api/orders/:id/health-consent/withdraw` - Withdraw consent for the client-owned health-data order
-- `POST /api/admin/orders/:id/health-consent/withdraw` - Record a withdrawal received by email or phone (admin only)
-
-### Quotes & Payments
-- `POST /api/quotes` - Create quote (admin only)
-- `POST /api/quotes/:id/accept` - Accept quote
-- `POST /api/quotes/:id/checkout` - Start Stripe Checkout session for an accepted quote
-- `POST /api/stripe/webhook` - Stripe webhook, marks quote/payment as paid
-
-### Communication
-- `GET /api/orders/:id/messages` - Get order messages
-- `POST /api/orders/:id/messages` - Send message
-
-### Documents
-- `POST /api/orders/:id/documents` - Upload a document to an order
-- `GET /api/orders/:id/documents/:docId/download` - Download an order document
-
-### Admin
-- `GET /api/admin/summary` - Dashboard statistics
-
-### Contact
-- `POST /api/contact` - Submit contact form (sends to admin + confirmation to user)
-
----
-
-## 🌍 Internationalization
-
-The platform supports **Polish (PL)** and **English (EN)** with:
-- Language selection stored in localStorage
-- The navigation language switch updates public, authentication, client order, support, and payment-preview views
-- Cookie banner respects language preference
-- Client-facing UI text translated in component code
-- Content object pattern for translations
-
----
-
-## 📝 Legal & Compliance
-
-- ✅ Privacy Policy (`/privacy`)
-- ✅ Terms & Conditions (`/terms`)
-- ✅ Cookie Preferences with granular controls
-- ✅ Versioned consent records for health data
-- ✅ GDPR-compliant data handling
-- ✅ Secure password storage with bcryptjs
-- ✅ Email opt-out support
-
----
-
-## 🤝 Contributing
-
-1. Create feature branch: `git checkout -b feature/description`
-2. Commit changes: `git commit -m "feat: description"`
-3. Push to branch: `git push origin feature/description`
-4. Open Pull Request
-
-### Code Standards
-- TypeScript strict mode enabled
-- Eslint & Prettier formatting
-- Zod schema validation
-- Component-based architecture
-
----
-
-## 📞 Support & Contact
-
-- **Email**: hello@linklang.co.uk
-- **Phone**: 07770 110735
-- **Website**: https://linklang.co.uk
-
----
-
-## 📄 License
-
-This project is proprietary software. All rights reserved.
-
----
-
-## 🙏 Acknowledgments
-
-Built with modern web technologies prioritizing:
-- **Security**: Industry-standard practices
-- **Performance**: Edge computing and optimization
-- **Accessibility**: WCAG compliance
-- **User Experience**: Intuitive, responsive design
-
----
-
-**Last Updated**: August 15, 2026  
-**Version**: 1.0.0
-# Force rebuild
+Website: <https://www.linklang.co.uk/>. Public service contact: <hello@linklang.co.uk>.
