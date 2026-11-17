@@ -425,7 +425,15 @@ export default function Home() {
             </div>
           </div>
           <div className="border-t border-slate-200 pt-8 text-xs text-slate-700 text-center">
-            <p>{lang === "PL" ? "Strona zaprojektowana i wykonana z dbałością o profesjonalną obsługę tłumaczeń." : "Designed & built with precision for professional translation services."}</p>
+            <p>
+              {lang === "PL" ? "Projekt i wykonanie: " : "Designed and built by "}
+              <a
+                href={lang === "PL" ? "https://forsadesign.co.uk/pl/" : "https://forsadesign.co.uk/en/"}
+                className="font-medium text-brand-600 underline underline-offset-4 hover:text-brand-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-600"
+              >
+                Forsa Design
+              </a>
+            </p>
           </div>
         </div>
       </footer>
