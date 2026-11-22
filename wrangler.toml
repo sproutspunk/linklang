@@ -13,7 +13,7 @@
 name = "linklang-api"
 main = "backend/src/index.ts"
 compatibility_date = "2024-11-01"
-vars = { CORS_ORIGIN = "https://linklang.co.uk,https://www.linklang.co.uk", CONTACT_INBOX_EMAIL = "meereck@gmail.com" }
+vars = { CORS_ORIGIN = "https://linklang.co.uk,https://www.linklang.co.uk", CONTACT_INBOX_EMAIL = "hello@linklang.co.uk" }
 
 [[d1_databases]]
 binding = "DB"
@@ -30,7 +30,7 @@ name = "linklang-api"
 routes = [
   { pattern = "api.linklang.co.uk", custom_domain = true }
 ]
-vars = { CORS_ORIGIN = "https://linklang.co.uk,https://www.linklang.co.uk", CONTACT_INBOX_EMAIL = "meereck@gmail.com" }
+vars = { CORS_ORIGIN = "https://linklang.co.uk,https://www.linklang.co.uk", CONTACT_INBOX_EMAIL = "hello@linklang.co.uk" }
 
 [[env.production.d1_databases]]
 binding = "DB"
