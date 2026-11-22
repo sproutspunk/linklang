@@ -1,0 +1,52 @@
+name: Diagnose LinkLang contact API
+
+on:
+  push:
+    branches: [test/contact-diagnostics-20261122]
+
+permissions:
+  contents: read
+
+jobs:
+  request:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Browser-style contact request diagnostic
+        run: |
+          python3 - <<'PY'
+          import json
+          import urllib.request
+          import urllib.error
+          import sys
+
+          base = "https://api.linklang.co.uk"
+          headers = {
+              "Content-Type": "application/json",
+              "Origin": "https://linklang.co.uk",
+              "Referer": "https://linklang.co.uk/",
+              "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+              "Accept": "application/json, text/plain, */*",
+          }
+          payload = {
+              "name": "LinkLang Technical Test",
+              "email": "hello@linklang.co.uk",
+              "message": "Controlled test of LinkLang contact endpoint. Technical test only, not a customer enquiry."
+          }
+          req = urllib.request.Request(base + "/api/contact", data=json.dumps(payload).encode(), headers=headers, method="POST")
+          try:
+              with urllib.request.urlopen(req, timeout=30) as resp:
+                  code = resp.status
+                  body = resp.read().decode(errors="replace")[:450]
+                  print("status:", code)
+                  print("server:", resp.headers.get("server"))
+                  print("content-type:", resp.headers.get("content-type"))
+                  print("body:", body)
+                  if code != 202: sys.exit(1)
+          except urllib.error.HTTPError as e:
+              print("status:", e.code)
+              print("server:", e.headers.get("server"))
+              print("cf-ray:", e.headers.get("cf-ray"))
+              print("content-type:", e.headers.get("content-type"))
+              print("body:", e.read().decode(errors="replace")[:450])
+              sys.exit(1)
+          PY
