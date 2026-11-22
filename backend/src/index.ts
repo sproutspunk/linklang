@@ -127,11 +127,29 @@ app.post("/api/contact", authRateLimit, async (c) => {
 
   const contactInbox = c.env.CONTACT_INBOX_EMAIL || "hello@linklang.co.uk";
 
+  // Only report success once Resend accepts the actual enquiry notification.
+  // Delivery to the mailbox is asynchronous and cannot be guaranteed here.
+  const accepted = await sendContactEmail(
+    c.env.RESEND_API_KEY,
+    contactInbox,
+    parsed.data.name,
+    parsed.data.email,
+    parsed.data.message
+  );
+  if (!accepted) {
+    console.error("Contact enquiry email was not accepted by Resend");
+    return c.json({ error: "Unable to send your enquiry. Please try again later." }, 502);
+  }
+
+  // The customer receipt is secondary: never fail a submitted enquiry if it fails.
   c.executionCtx.waitUntil(
-    Promise.all([
-      sendContactEmail(c.env.RESEND_API_KEY, contactInbox, parsed.data.name, parsed.data.email, parsed.data.message),
-      sendContactConfirmationEmail(c.env.RESEND_API_KEY, parsed.data.email, parsed.data.name),
-    ])
+    sendContactConfirmationEmail(c.env.RESEND_API_KEY, parsed.data.email, parsed.data.name)
+      .then((confirmed) => {
+        if (!confirmed) console.error("Contact confirmation email was not accepted by Resend");
+      })
+      .catch(() => {
+        console.error("Contact confirmation email failed");
+      })
   );
   return c.json({ success: true }, 202);
 });
