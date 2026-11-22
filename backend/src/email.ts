@@ -24,13 +24,29 @@ function escapeHtml(value: string) {
   })[character] || character);
 }
 
+function emailFailureReason(message: string): string {
+  if (/api[ _-]?key|authorization/i.test(message)) return "api_key_rejected";
+  if (/only send testing emails|testing emails.*own/i.test(message)) return "testing_recipient_restricted";
+  if (/domain.*(?:not verified|unverified|verify)/i.test(message)) return "sender_domain_unverified";
+  if (/reply[_ -]?to/i.test(message)) return "invalid_reply_to";
+  if (/(?:invalid|missing).*['"`]?from|['"`]?from.*(?:invalid|required)/i.test(message)) return "invalid_sender";
+  if (/(?:invalid|missing).*['"`]?to|['"`]?to.*(?:invalid|required)/i.test(message)) return "invalid_recipient";
+  if (/rate limit|too many requests/i.test(message)) return "rate_limited";
+  return "unclassified_provider_error";
+}
+
 async function send(apiKey: string, subject: string, to: string, html: string, replyTo?: string): Promise<boolean> {
   try {
     const resend = new Resend(apiKey);
     const { data, error } = await resend.emails.send({ from: FROM, to, subject, html, ...(replyTo ? { replyTo } : {}) });
     if (error || !data?.id) {
       // Avoid logging recipient addresses or message contents.
-      console.error("Resend rejected an email request", error?.name || "missing_message_id");
+      const statusCode = error && "statusCode" in error && typeof error.statusCode === "number" ? error.statusCode : 0;
+      console.error("Resend rejected an email request", {
+        name: error?.name || "missing_message_id",
+        statusCode,
+        reason: error ? emailFailureReason(error.message) : "missing_message_id",
+      });
       return false;
     }
     return true;

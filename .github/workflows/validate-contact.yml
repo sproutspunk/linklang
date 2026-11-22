@@ -29,4 +29,4 @@ jobs:
       - name: Build frontend
         run: npm run build -w frontend
       - name: Verify contact form acceptance checks
-        run: node --test backend/tests/contact-flow.test.cjs
+        run: node --test backend/tests/*.test.cjs
