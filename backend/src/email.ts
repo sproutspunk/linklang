@@ -27,10 +27,15 @@ function escapeHtml(value: string) {
 async function send(apiKey: string, subject: string, to: string, html: string, replyTo?: string): Promise<boolean> {
   try {
     const resend = new Resend(apiKey);
-    const { error } = await resend.emails.send({ from: FROM, to, subject, html, ...(replyTo ? { replyTo } : {}) });
-    if (error) return false;
+    const { data, error } = await resend.emails.send({ from: FROM, to, subject, html, ...(replyTo ? { replyTo } : {}) });
+    if (error || !data?.id) {
+      // Avoid logging recipient addresses or message contents.
+      console.error("Resend rejected an email request", error?.name || "missing_message_id");
+      return false;
+    }
     return true;
-  } catch (err) {
+  } catch {
+    console.error("Resend email request failed unexpectedly");
     return false;
   }
 }
@@ -116,6 +121,6 @@ export function sendContactConfirmationEmail(apiKey: string, to: string, name: s
     apiKey,
     "LinkLang - potwierdzenie wiadomości",
     to,
-    `<p>Cześć ${escapeHtml(name)},</p><p>Dziękujemy za wiadomość. Odpowiemy na nią tak szybko, jak to możliwe.</p><p>If you want, you can also write to meereck@gmail.com.</p><p>Jeśli chcesz, możesz też od razu napisać na meereck@gmail.com.</p>`
+    `<p>Cześć ${escapeHtml(name)},</p><p>Dziękujemy za wiadomość. Odpowiemy na nią tak szybko, jak to możliwe.</p><p>Możesz też napisać bezpośrednio na hello@linklang.co.uk.</p>`
   );
 }
