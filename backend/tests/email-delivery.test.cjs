@@ -167,3 +167,28 @@ test('contact acknowledgement sends to the customer without inheriting a Reply-T
   assert.ok(module.requests[0].html.includes('&lt;Customer&gt;'));
   assert.deepEqual(module.logs, []);
 });
+
+
+test('registration emails preserve routing and never expose provider error names', async (t) => {
+  for (const kind of ['welcome', 'admin']) {
+    for (const failure of ['success', 'private-name', 'missing-id', 'throw']) {
+      await t.test(kind + ' ' + failure, async () => {
+        const module = loadModule(() => {
+          if (failure === 'throw') throw new Error(API_KEY + CUSTOMER_EMAIL);
+          if (failure === 'private-name') return { data: null, error: { name: CUSTOMER_EMAIL + API_KEY, message: MESSAGE, statusCode: 422 } };
+          return { data: failure === 'success' ? { id: 'mock-id' } : null, error: null };
+        });
+        const result = kind === 'welcome'
+          ? await module.sendWelcomeEmail(API_KEY, CUSTOMER_EMAIL, '<Customer>')
+          : await module.sendNewUserNotificationEmail(API_KEY, 'hello@linklang.co.uk', '<Customer>', CUSTOMER_EMAIL);
+        assert.equal(result, failure === 'success');
+        assert.equal(module.requests.length, 1);
+        assert.equal(module.requests[0].to, kind === 'welcome' ? CUSTOMER_EMAIL : 'hello@linklang.co.uk');
+        assert.ok(module.requests[0].html.includes('&lt;Customer&gt;'));
+        assert.equal(Object.hasOwn(module.requests[0], 'replyTo'), false);
+        assertPrivateLogs(module.logs);
+        if (failure === 'private-name') assert.equal(module.logs[0][1].name, 'unknown_provider_error');
+      });
+    }
+  }
+});

@@ -43,7 +43,7 @@ async function send(apiKey: string, subject: string, to: string, html: string, r
       // Avoid logging recipient addresses or message contents.
       const statusCode = error && "statusCode" in error && typeof error.statusCode === "number" ? error.statusCode : 0;
       console.error("Resend rejected an email request", {
-        name: error?.name || "missing_message_id",
+        name: error ? (["validation_error", "missing_api_key", "invalid_api_key", "restricted_api_key", "rate_limit_exceeded", "internal_server_error", "application_error", "not_found", "invalid_parameter", "invalid_from_address"].includes(error.name) ? error.name : "unknown_provider_error") : "missing_message_id",
         statusCode,
         reason: error ? emailFailureReason(error.message) : "missing_message_id",
       });
